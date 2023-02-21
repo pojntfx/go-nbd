@@ -1,23 +1,16 @@
 package main
 
 import (
-	"encoding/binary"
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"os"
 )
 
-// See https://github.com/freqlabs/nbd-client/blob/master/nbd-protocol.h#L40
-const (
-	// Negotiation handshake
-	NewstyleMagic     = uint64(0x49484156454F5054)
-	FlagFixedNewstyle = uint16(1 << 0)
-)
-
 func main() {
 	file := flag.String("file", "tapisk.img", "Path to file to expose")
-	laddr := flag.String("laddr", ":10809", "Listen address")
+	laddr := flag.String("laddr", fmt.Sprintf(":%v", NbdDefaultPort), "Listen address")
 
 	flag.Parse()
 
@@ -60,15 +53,6 @@ func main() {
 
 				log.Printf("%v clients connected", clients)
 			}()
-
-			// Negotiation handshake
-			if err := binary.Write(conn, binary.BigEndian, NewstyleMagic); err != nil {
-				panic(err)
-			}
-
-			if err := binary.Write(conn, binary.BigEndian, FlagFixedNewstyle); err != nil {
-				panic(err)
-			}
 		}()
 	}
 }
