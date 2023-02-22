@@ -1,16 +1,25 @@
 package main
 
 import (
+	"encoding/binary"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net"
 	"os"
+
+	"github.com/pojntfx/tapisk/pkg/protocol"
+)
+
+var (
+	errOldstyleNegotiationUnsupported = errors.New("oldstyle negotiation is unsupported")
+	errNoZeroesUnsupported            = errors.New("no zeroes is unsupported")
 )
 
 func main() {
 	file := flag.String("file", "tapisk.img", "Path to file to expose")
-	laddr := flag.String("laddr", fmt.Sprintf(":%v", NbdDefaultPort), "Listen address")
+	laddr := flag.String("laddr", fmt.Sprintf(":%v", protocol.NbdDefaultPort), "Listen address")
 
 	flag.Parse()
 
@@ -53,6 +62,29 @@ func main() {
 
 				log.Printf("%v clients connected", clients)
 			}()
+
+			// Server handshake
+			if err := binary.Write(conn, binary.BigEndian, protocol.NbdNewstyleNegotiation{
+				Magic:          protocol.NbdMagic,
+				NewstyleMagic:  protocol.NbdNewstyleMagic,
+				HandshakeFlags: protocol.NbdFlagFixedNewstyle,
+			}); err != nil {
+				panic(err)
+			}
+
+			// Client handshake
+			var clientFlags protocol.NbdClientFlags
+			if err := binary.Read(conn, binary.BigEndian, &clientFlags); err != nil {
+				panic(err)
+			}
+
+			if clientFlags.ClientFlags&protocol.NbdClientFlagFixedNewstyle == 0 {
+				panic(errOldstyleNegotiationUnsupported)
+			}
+
+			if clientFlags.ClientFlags&protocol.NbdClientFlagNoZeroes != 0 {
+				panic(errNoZeroesUnsupported)
+			}
 		}()
 	}
 }

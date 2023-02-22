@@ -1,6 +1,7 @@
-package main
+package protocol
 
 // Port of https://github.com/freqlabs/nbd-client/blob/master/nbd-protocol.h#L40
+// For more, see https://github.com/NetworkBlockDevice/nbd/blob/master/doc/proto.md
 
 /**
  ** Network protocol header structs and values
@@ -52,7 +53,7 @@ type NbdNewstyleNegotiation struct {
 
 const (
 	NbdClientFlagFixedNewstyle = NbdFlagFixedNewstyle
-	NbdclientFlagNoZeroes      = NbdFlagNoZeroes
+	NbdClientFlagNoZeroes      = NbdFlagNoZeroes
 )
 
 type NbdClientFlags struct {
