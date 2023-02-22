@@ -1,7 +1,7 @@
 package protocol
 
 // Port of https://github.com/freqlabs/nbd-client/blob/master/nbd-protocol.h#L40
-// For more, see https://github.com/NetworkBlockDevice/nbd/blob/master/doc/proto.md
+// For more info, see https://github.com/NetworkBlockDevice/nbd/blob/master/doc/proto.md
 
 /**
  ** Network protocol header structs and values
@@ -109,7 +109,7 @@ type NbdOption struct {
 	Magic  uint64
 	Option uint32
 	Length uint32
-	Data   []byte
+	// Data   []byte // Sent separately
 }
 
 const (
@@ -137,7 +137,7 @@ type NbdOptionReply struct {
 	Option uint32
 	Typ    int32
 	Length uint32
-	Data   []byte
+	// Data   []byte // Sent separately
 }
 
 type NbdOptionReplyServer struct {
@@ -202,7 +202,7 @@ type NbdRequest struct {
 	Handle  uint64
 	Offset  uint64
 	Length  uint32
-	Data    []byte
+	// Data    []byte // Sent separately
 }
 
 const (
@@ -223,5 +223,5 @@ type NbdReply struct {
 	Magic  uint32
 	Err    uint32
 	Handle uint64
-	Data   []byte
+	// Data   []byte // Sent separately
 }

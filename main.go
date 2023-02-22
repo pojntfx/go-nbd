@@ -13,8 +13,10 @@ import (
 )
 
 var (
-	errOldstyleNegotiationUnsupported = errors.New("oldstyle negotiation is unsupported")
-	errNoZeroesUnsupported            = errors.New("no zeroes is unsupported")
+	errFixedNewstyleNotSet = errors.New("fixed newstyle client flag not set")
+	errNoZeroesNotSet      = errors.New("no zeroes client flag not set")
+
+	errOptionUnsupported = errors.New("option is unsupported")
 )
 
 func main() {
@@ -79,11 +81,47 @@ func main() {
 			}
 
 			if clientFlags.ClientFlags&protocol.NbdClientFlagFixedNewstyle == 0 {
-				panic(errOldstyleNegotiationUnsupported)
+				panic(errFixedNewstyleNotSet)
 			}
 
-			if clientFlags.ClientFlags&protocol.NbdClientFlagNoZeroes != 0 {
-				panic(errNoZeroesUnsupported)
+			if clientFlags.ClientFlags&protocol.NbdClientFlagNoZeroes == 1 {
+				panic(errNoZeroesNotSet)
+			}
+
+			// Option haggling
+		l:
+			for {
+				var option protocol.NbdOption
+				if err := binary.Read(conn, binary.BigEndian, &option); err != nil {
+					panic(err)
+				}
+
+				switch option.Option {
+				case protocol.NbdOptionGo:
+					if err := binary.Write(conn, binary.BigEndian, protocol.NbdOptionReply{
+						Magic:  protocol.NbdOptionReplyMagic,
+						Option: option.Option,
+						Typ:    protocol.NbdReplyAck,
+					}); err != nil {
+						panic(err)
+					}
+
+					break l
+				case protocol.NbdOptionAbort:
+					if err := binary.Write(conn, binary.BigEndian, protocol.NbdOptionReply{
+						Magic:  protocol.NbdOptionReplyMagic,
+						Option: option.Option,
+						Typ:    protocol.NbdReplyAck,
+					}); err != nil {
+						panic(err)
+					}
+
+					return
+				default:
+					// FIXME: This isn't compliant, we should be sending back a `NbdReplyError` here instead of just closing the connection and also handle different export names
+
+					panic(errOptionUnsupported)
+				}
 			}
 		}()
 	}
