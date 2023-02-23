@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -16,7 +18,11 @@ var (
 	errFixedNewstyleNotSet = errors.New("fixed newstyle client flag not set")
 	errNoZeroesNotSet      = errors.New("no zeroes client flag not set")
 
-	errOptionUnsupported = errors.New("option is unsupported")
+	errOptionUnsupported  = errors.New("option is unsupported")
+	errCommandUnsupported = errors.New("command is unsupported")
+
+	errInvalidOptionMagic  = errors.New("invalid option magic")
+	errInvalidRequestMagic = errors.New("invalid request magic")
 )
 
 func main() {
@@ -96,6 +102,14 @@ func main() {
 					panic(err)
 				}
 
+				if option.Magic != protocol.NbdOptionMagic {
+					panic(errInvalidOptionMagic)
+				}
+
+				if _, err := io.CopyN(io.Discard, conn, int64(option.Length)); err != nil {
+					panic(err)
+				}
+
 				switch option.Option {
 				case protocol.NbdOptionGo:
 					if err := binary.Write(conn, binary.BigEndian, protocol.NbdOptionReply{
@@ -105,6 +119,8 @@ func main() {
 					}); err != nil {
 						panic(err)
 					}
+
+					// FIXME: Send NbdExportInfo before continuing to transmission
 
 					break l
 				case protocol.NbdOptionAbort:
@@ -121,6 +137,33 @@ func main() {
 					// FIXME: This isn't compliant, we should be sending back a `NbdReplyError` here instead of just closing the connection and also handle different export names
 
 					panic(errOptionUnsupported)
+				}
+			}
+
+			// Transmission
+			for {
+				var request protocol.NbdRequest
+				if err := binary.Read(conn, binary.BigEndian, &request); err != nil {
+					panic(err)
+				}
+
+				if request.Magic != protocol.NbdRequestMagic {
+					panic(errInvalidRequestMagic)
+				}
+
+				var b *bytes.Buffer
+				if request.Length > 0 {
+					b = bytes.NewBuffer(make([]byte, request.Length))
+					if _, err := io.CopyN(b, conn, int64(request.Length)); err != nil {
+						panic(err)
+					}
+				}
+
+				switch request.Command {
+				case protocol.NbdCmdDisconnect:
+					return
+				default:
+					panic(errCommandUnsupported)
 				}
 			}
 		}()

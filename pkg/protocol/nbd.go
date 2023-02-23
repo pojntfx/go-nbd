@@ -177,7 +177,7 @@ type NbdExportInfo struct {
  */
 
 const (
-	NbdRequestMagic = uint64(0x25609513)
+	NbdRequestMagic = uint32(0x25609513)
 
 	NbdFlagHasFlags   = (1 << 0)
 	NbdFlagReadOnly   = (1 << 1)
@@ -206,7 +206,7 @@ type NbdRequest struct {
 }
 
 const (
-	NbdReplyMagic = uint64(0x67446698)
+	NbdReplyMagic = uint32(0x67446698)
 )
 
 const (
