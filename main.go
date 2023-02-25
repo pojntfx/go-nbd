@@ -37,6 +37,11 @@ func main() {
 	}
 	defer f.Close()
 
+	stat, err := f.Stat()
+	if err != nil {
+		panic(err)
+	}
+
 	l, err := net.Listen("tcp", *laddr)
 	if err != nil {
 		panic(err)
@@ -106,10 +111,6 @@ func main() {
 					panic(errInvalidOptionMagic)
 				}
 
-				if _, err := io.CopyN(io.Discard, conn, int64(option.Length)); err != nil {
-					panic(err)
-				}
-
 				switch option.Option {
 				case protocol.NbdOptionGo:
 					if err := binary.Write(conn, binary.BigEndian, protocol.NbdOptionReply{
@@ -120,9 +121,34 @@ func main() {
 						panic(err)
 					}
 
-					// FIXME: Send NbdExportInfo before continuing to transmission
+					var exportNameLen uint32
+					if err := binary.Read(conn, binary.BigEndian, &exportNameLen); err != nil {
+						panic(err)
+					}
+
+					exportName := bytes.NewBuffer(make([]byte, exportNameLen))
+					if _, err := io.CopyN(exportName, conn, int64(exportNameLen)); err != nil {
+						panic(err)
+					}
+
+					var informationRequestCount uint16
+					if err := binary.Read(conn, binary.BigEndian, &informationRequestCount); err != nil {
+						panic(err)
+					}
+
+					// TODO: We need to return `informationRequestCount` replies here first
+					log.Println(exportName, informationRequestCount)
+
+					if err := binary.Write(conn, binary.BigEndian, protocol.NbdExportInfo{
+						Size:              uint64(stat.Size()),
+						TransmissionFlags: protocol.NbdFlagHasFlags,
+						Reserved:          ([124]uint8)(make([]uint8, 124)),
+					}); err != nil {
+						panic(err)
+					}
 
 					break l
+
 				case protocol.NbdOptionAbort:
 					if err := binary.Write(conn, binary.BigEndian, protocol.NbdOptionReply{
 						Magic:  protocol.NbdOptionReplyMagic,
@@ -133,6 +159,7 @@ func main() {
 					}
 
 					return
+
 				default:
 					// FIXME: This isn't compliant, we should be sending back a `NbdReplyError` here instead of just closing the connection and also handle different export names
 
@@ -162,6 +189,7 @@ func main() {
 				switch request.Command {
 				case protocol.NbdCmdDisconnect:
 					return
+
 				default:
 					panic(errCommandUnsupported)
 				}
