@@ -190,6 +190,20 @@ func main() {
 				case protocol.NbdCmdDisconnect:
 					return
 
+				case protocol.NbdCmdRead:
+					b := make([]byte, request.Length)
+					if _, err := f.ReadAt(b, int64(request.Offset)); err != nil {
+						panic(err)
+					}
+
+					if err := binary.Write(conn, binary.BigEndian, protocol.NbdReply{
+						Magic:  protocol.NbdReplyMagic,
+						Err:    0,
+						Handle: request.Handle,
+					}); err != nil {
+						panic(err)
+					}
+
 				default:
 					panic(errCommandUnsupported)
 				}
