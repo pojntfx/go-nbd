@@ -217,6 +217,19 @@ func main() {
 						panic(err)
 					}
 
+				case protocol.NbdCmdFlush:
+					if err := f.Sync(); err != nil {
+						panic(err)
+					}
+
+					if err := binary.Write(conn, binary.BigEndian, protocol.NbdReply{
+						Magic:  protocol.NbdReplyMagic,
+						Err:    0,
+						Handle: request.Handle,
+					}); err != nil {
+						panic(err)
+					}
+
 				default:
 					panic(errCommandUnsupported)
 				}
