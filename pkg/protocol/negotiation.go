@@ -14,7 +14,9 @@ const (
 
 	NEGOTIATION_TYPE_REPLY_INFO = uint32(3)
 
-	NEGOTIATION_TYPE_INFO_EXPORT = uint16(0)
+	NEGOTIATION_TYPE_INFO_EXPORT      = uint16(0)
+	NEGOTIATION_TYPE_INFO_NAME        = uint16(1)
+	NEGOTIATION_TYPE_INFO_DESCRIPTION = uint16(2)
 )
 
 type NegotiationNewstyleHeader struct {
@@ -41,3 +43,9 @@ type NegotiationReplyInfo struct {
 	Size              uint64
 	TransmissionFlags uint16
 }
+
+type NegotiationReplyNameHeader struct {
+	Type uint16
+}
+
+type NegotiationReplyDescriptionHeader NegotiationReplyNameHeader

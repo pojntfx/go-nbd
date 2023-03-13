@@ -96,36 +96,92 @@ func main() {
 						panic(err)
 					}
 
-					var informationRequestCount uint16
-					if err := binary.Read(conn, binary.BigEndian, &informationRequestCount); err != nil {
-						panic(err)
+					{
+						var informationRequestCount uint16
+						if err := binary.Read(conn, binary.BigEndian, &informationRequestCount); err != nil {
+							panic(err)
+						}
+
+						_, err := io.CopyN(io.Discard, conn, 2*int64(informationRequestCount)) // Discard information requests (uint16s)
+						if err != nil {
+							panic(err)
+						}
 					}
 
-					_, err := io.CopyN(io.Discard, conn, 2*int64(informationRequestCount)) // Discard information requests (uint16s)
-					if err != nil {
-						panic(err)
+					{
+						info := &bytes.Buffer{}
+						if err := binary.Write(info, binary.BigEndian, protocol.NegotiationReplyInfo{
+							Type:              protocol.NEGOTIATION_TYPE_INFO_EXPORT,
+							Size:              uint64(stat.Size()),
+							TransmissionFlags: 0,
+						}); err != nil {
+							panic(err)
+						}
+
+						if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationReplyHeader{
+							ReplyMagic: protocol.NEGOTIATION_MAGIC_REPLY,
+							ID:         optionHeader.ID,
+							Type:       protocol.NEGOTIATION_TYPE_REPLY_INFO,
+							Length:     uint32(info.Len()),
+						}); err != nil {
+							panic(err)
+						}
+
+						if _, err := io.Copy(conn, info); err != nil {
+							panic(err)
+						}
 					}
 
-					replyInfo := &bytes.Buffer{}
-					if err := binary.Write(replyInfo, binary.BigEndian, protocol.NegotiationReplyInfo{
-						Type:              protocol.NEGOTIATION_TYPE_INFO_EXPORT,
-						Size:              uint64(stat.Size()),
-						TransmissionFlags: 0,
-					}); err != nil {
-						panic(err)
+					{
+						info := &bytes.Buffer{}
+						if err := binary.Write(info, binary.BigEndian, protocol.NegotiationReplyNameHeader{
+							Type: protocol.NEGOTIATION_TYPE_INFO_NAME,
+						}); err != nil {
+							panic(err)
+						}
+
+						if err := binary.Write(info, binary.BigEndian, exportName); err != nil {
+							panic(err)
+						}
+
+						if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationReplyHeader{
+							ReplyMagic: protocol.NEGOTIATION_MAGIC_REPLY,
+							ID:         optionHeader.ID,
+							Type:       protocol.NEGOTIATION_TYPE_REPLY_INFO,
+							Length:     uint32(info.Len()),
+						}); err != nil {
+							panic(err)
+						}
+
+						if _, err := io.Copy(conn, info); err != nil {
+							panic(err)
+						}
 					}
 
-					if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationReplyHeader{
-						ReplyMagic: protocol.NEGOTIATION_MAGIC_REPLY,
-						ID:         optionHeader.ID,
-						Type:       protocol.NEGOTIATION_TYPE_REPLY_INFO,
-						Length:     uint32(replyInfo.Len()),
-					}); err != nil {
-						panic(err)
-					}
+					{
+						info := &bytes.Buffer{}
+						if err := binary.Write(info, binary.BigEndian, protocol.NegotiationReplyDescriptionHeader{
+							Type: protocol.NEGOTIATION_TYPE_INFO_DESCRIPTION,
+						}); err != nil {
+							panic(err)
+						}
 
-					if _, err := io.Copy(conn, replyInfo); err != nil {
-						panic(err)
+						if err := binary.Write(info, binary.BigEndian, []byte("Tapisk export")); err != nil {
+							panic(err)
+						}
+
+						if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationReplyHeader{
+							ReplyMagic: protocol.NEGOTIATION_MAGIC_REPLY,
+							ID:         optionHeader.ID,
+							Type:       protocol.NEGOTIATION_TYPE_REPLY_INFO,
+							Length:     uint32(info.Len()),
+						}); err != nil {
+							panic(err)
+						}
+
+						if _, err := io.Copy(conn, info); err != nil {
+							panic(err)
+						}
 					}
 				}
 			}
