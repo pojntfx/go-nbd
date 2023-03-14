@@ -78,6 +78,7 @@ func main() {
 				panic(err)
 			}
 
+		l:
 			for {
 				var optionHeader protocol.NegotiationOptionHeader
 				if err := binary.Read(conn, binary.BigEndian, &optionHeader); err != nil {
@@ -182,6 +183,44 @@ func main() {
 						if _, err := io.Copy(conn, info); err != nil {
 							panic(err)
 						}
+					}
+
+					{
+						info := &bytes.Buffer{}
+						if err := binary.Write(info, binary.BigEndian, protocol.NegotiationReplyBlockSize{
+							Type:               protocol.NEGOTIATION_TYPE_INFO_BLOCKSIZE,
+							MinimumBlockSize:   1,
+							PreferredBlockSize: 32 * 1024,
+							MaximumBlockSize:   128 * 1024 * 1024,
+						}); err != nil {
+							panic(err)
+						}
+
+						if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationReplyHeader{
+							ReplyMagic: protocol.NEGOTIATION_MAGIC_REPLY,
+							ID:         optionHeader.ID,
+							Type:       protocol.NEGOTIATION_TYPE_REPLY_INFO,
+							Length:     uint32(info.Len()),
+						}); err != nil {
+							panic(err)
+						}
+
+						if _, err := io.Copy(conn, info); err != nil {
+							panic(err)
+						}
+					}
+
+					if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationReplyHeader{
+						ReplyMagic: protocol.NEGOTIATION_MAGIC_REPLY,
+						ID:         optionHeader.ID,
+						Type:       protocol.NEGOTIATION_TYPE_REPLY_ACK,
+						Length:     0,
+					}); err != nil {
+						panic(err)
+					}
+
+					if optionHeader.ID == protocol.NEGOTIATION_OPTION_GO {
+						break l
 					}
 				}
 			}

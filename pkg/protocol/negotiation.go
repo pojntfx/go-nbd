@@ -12,11 +12,13 @@ const (
 	NEGOTIATION_OPTION_INFO = uint32(6)
 	NEGOTIATION_OPTION_GO   = uint32(7)
 
+	NEGOTIATION_TYPE_REPLY_ACK  = uint32(1)
 	NEGOTIATION_TYPE_REPLY_INFO = uint32(3)
 
 	NEGOTIATION_TYPE_INFO_EXPORT      = uint16(0)
 	NEGOTIATION_TYPE_INFO_NAME        = uint16(1)
 	NEGOTIATION_TYPE_INFO_DESCRIPTION = uint16(2)
+	NEGOTIATION_TYPE_INFO_BLOCKSIZE   = uint16(3)
 )
 
 type NegotiationNewstyleHeader struct {
@@ -49,3 +51,10 @@ type NegotiationReplyNameHeader struct {
 }
 
 type NegotiationReplyDescriptionHeader NegotiationReplyNameHeader
+
+type NegotiationReplyBlockSize struct {
+	Type               uint16
+	MinimumBlockSize   uint32
+	PreferredBlockSize uint32
+	MaximumBlockSize   uint32
+}
