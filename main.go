@@ -222,6 +222,20 @@ func main() {
 					if optionHeader.ID == protocol.NEGOTIATION_OPTION_GO {
 						break l
 					}
+				default:
+					_, err := io.CopyN(io.Discard, conn, int64(optionHeader.Length)) // Discard the unknown option
+					if err != nil {
+						panic(err)
+					}
+
+					if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationReplyHeader{
+						ReplyMagic: protocol.NEGOTIATION_MAGIC_REPLY,
+						ID:         optionHeader.ID,
+						Type:       protocol.NEGOTIATION_TYPE_REPLY_ERR_UNSUPPORTED,
+						Length:     0,
+					}); err != nil {
+						panic(err)
+					}
 				}
 			}
 		}()
