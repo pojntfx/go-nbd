@@ -233,6 +233,44 @@ func main() {
 					}
 
 					return
+				case protocol.NEGOTIATION_OPTION_LIST:
+					{
+						info := &bytes.Buffer{}
+
+						exportName := []byte("default")
+
+						if err := binary.Write(info, binary.BigEndian, exportName); err != nil {
+							panic(err)
+						}
+
+						if err := binary.Write(info, binary.BigEndian, uint32(len(exportName))); err != nil {
+							panic(err)
+						}
+
+						if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationReplyHeader{
+							ReplyMagic: protocol.NEGOTIATION_MAGIC_REPLY,
+							ID:         optionHeader.ID,
+							Type:       protocol.NEGOTIATION_TYPE_REPLY_SERVER,
+							Length:     uint32(info.Len()),
+						}); err != nil {
+							panic(err)
+						}
+
+						if _, err := io.Copy(conn, info); err != nil {
+							panic(err)
+						}
+					}
+
+					if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationReplyHeader{
+						ReplyMagic: protocol.NEGOTIATION_MAGIC_REPLY,
+						ID:         optionHeader.ID,
+						Type:       protocol.NEGOTIATION_TYPE_REPLY_ACK,
+						Length:     0,
+					}); err != nil {
+						panic(err)
+					}
+
+					return
 				default:
 					_, err := io.CopyN(io.Discard, conn, int64(optionHeader.Length)) // Discard the unknown option
 					if err != nil {
