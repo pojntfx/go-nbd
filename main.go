@@ -309,7 +309,24 @@ func main() {
 					if err != nil {
 						panic(err)
 					}
+				case protocol.TRANSMISSION_TYPE_REQUEST_WRITE:
+					_, err := io.CopyN(io.NewOffsetWriter(f, int64(requestHeader.Offset)), conn, int64(requestHeader.Length))
+					if err != nil {
+						panic(err)
+					}
+
+					if err := binary.Write(conn, binary.BigEndian, protocol.TransmissionReplyHeader{
+						ReplyMagic: protocol.TRANSMISSION_MAGIC_REPLY,
+						Error:      0,
+						Handle:     requestHeader.Handle,
+					}); err != nil {
+						panic(err)
+					}
 				case protocol.TRANSMISSION_TYPE_REQUEST_DISC:
+					if err := f.Sync(); err != nil {
+						panic(err)
+					}
+
 					return
 				default:
 					_, err := io.CopyN(io.Discard, conn, int64(requestHeader.Length)) // Discard the unknown command
