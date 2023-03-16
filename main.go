@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"sync"
 
 	"github.com/pojntfx/tapisk/pkg/protocol"
 )
@@ -24,6 +25,8 @@ func main() {
 		panic(err)
 	}
 	defer f.Close()
+
+	var fileLock sync.Mutex
 
 	stat, err := f.Stat()
 	if err != nil {
@@ -297,21 +300,33 @@ func main() {
 
 				switch requestHeader.Type {
 				case protocol.TRANSMISSION_TYPE_REQUEST_READ:
+					fileLock.Lock()
+
 					if err := binary.Write(conn, binary.BigEndian, protocol.TransmissionReplyHeader{
 						ReplyMagic: protocol.TRANSMISSION_MAGIC_REPLY,
 						Error:      0,
 						Handle:     requestHeader.Handle,
 					}); err != nil {
+						fileLock.Unlock()
+
 						panic(err)
 					}
 
 					_, err := io.CopyN(conn, io.NewSectionReader(f, int64(requestHeader.Offset), int64(requestHeader.Length)), int64(requestHeader.Length))
 					if err != nil {
+						fileLock.Unlock()
+
 						panic(err)
 					}
+
+					fileLock.Unlock()
 				case protocol.TRANSMISSION_TYPE_REQUEST_WRITE:
+					fileLock.Lock()
+
 					_, err := io.CopyN(io.NewOffsetWriter(f, int64(requestHeader.Offset)), conn, int64(requestHeader.Length))
 					if err != nil {
+						fileLock.Unlock()
+
 						panic(err)
 					}
 
@@ -320,8 +335,12 @@ func main() {
 						Error:      0,
 						Handle:     requestHeader.Handle,
 					}); err != nil {
+						fileLock.Unlock()
+
 						panic(err)
 					}
+
+					fileLock.Unlock()
 				case protocol.TRANSMISSION_TYPE_REQUEST_DISC:
 					if err := f.Sync(); err != nil {
 						panic(err)
