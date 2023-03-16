@@ -296,6 +296,19 @@ func main() {
 				}
 
 				switch requestHeader.Type {
+				case protocol.TRANSMISSION_TYPE_REQUEST_READ:
+					if err := binary.Write(conn, binary.BigEndian, protocol.TransmissionReplyHeader{
+						ReplyMagic: protocol.TRANSMISSION_MAGIC_REPLY,
+						Error:      0,
+						Handle:     requestHeader.Handle,
+					}); err != nil {
+						panic(err)
+					}
+
+					_, err := io.CopyN(conn, io.NewSectionReader(f, int64(requestHeader.Offset), int64(requestHeader.Length)), int64(requestHeader.Length))
+					if err != nil {
+						panic(err)
+					}
 				case protocol.TRANSMISSION_TYPE_REQUEST_DISC:
 					return
 				default:
