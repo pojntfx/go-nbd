@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -12,6 +13,10 @@ import (
 	"sync"
 
 	"github.com/pojntfx/tapisk/pkg/protocol"
+)
+
+var (
+	errInvalidMagic = errors.New("invalid magic")
 )
 
 func main() {
@@ -86,6 +91,10 @@ func main() {
 				var optionHeader protocol.NegotiationOptionHeader
 				if err := binary.Read(conn, binary.BigEndian, &optionHeader); err != nil {
 					panic(err)
+				}
+
+				if optionHeader.OptionMagic != protocol.NEGOTIATION_MAGIC_OPTION {
+					panic(errInvalidMagic)
 				}
 
 				switch optionHeader.ID {
@@ -298,6 +307,10 @@ func main() {
 					panic(err)
 				}
 
+				if requestHeader.RequestMagic != protocol.TRANSMISSION_MAGIC_REQUEST {
+					panic(errInvalidMagic)
+				}
+
 				switch requestHeader.Type {
 				case protocol.TRANSMISSION_TYPE_REQUEST_READ:
 					fileLock.Lock()
@@ -312,8 +325,7 @@ func main() {
 						panic(err)
 					}
 
-					_, err := io.CopyN(conn, io.NewSectionReader(f, int64(requestHeader.Offset), int64(requestHeader.Length)), int64(requestHeader.Length))
-					if err != nil {
+					if _, err := io.CopyN(conn, io.NewSectionReader(f, int64(requestHeader.Offset), int64(requestHeader.Length)), int64(requestHeader.Length)); err != nil {
 						fileLock.Unlock()
 
 						panic(err)
@@ -323,8 +335,7 @@ func main() {
 				case protocol.TRANSMISSION_TYPE_REQUEST_WRITE:
 					fileLock.Lock()
 
-					_, err := io.CopyN(io.NewOffsetWriter(f, int64(requestHeader.Offset)), conn, int64(requestHeader.Length))
-					if err != nil {
+					if _, err := io.CopyN(io.NewOffsetWriter(f, int64(requestHeader.Offset)), conn, int64(requestHeader.Length)); err != nil {
 						fileLock.Unlock()
 
 						panic(err)
