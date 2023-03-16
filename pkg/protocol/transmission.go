@@ -1,0 +1,24 @@
+package protocol
+
+const (
+	TRANSMISSION_MAGIC_REPLY = uint32(0x67446698)
+
+	TRANSMISSION_TYPE_REQUEST_DISC = uint16(2)
+
+	TRANSMISSION_ERROR_EINVAL = uint32(22)
+)
+
+type TransmissionRequestHeader struct {
+	RequestMagic uint32
+	CommandFlags uint16
+	Type         uint16
+	Handle       uint64
+	Offset       uint64
+	Length       uint32
+}
+
+type TransmissionReplyHeader struct {
+	ReplyMagic uint32
+	Error      uint32
+	Handle     uint64
+}

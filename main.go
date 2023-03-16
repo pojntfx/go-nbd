@@ -78,7 +78,7 @@ func main() {
 				panic(err)
 			}
 
-		l:
+		n:
 			for {
 				var optionHeader protocol.NegotiationOptionHeader
 				if err := binary.Read(conn, binary.BigEndian, &optionHeader); err != nil {
@@ -86,7 +86,7 @@ func main() {
 				}
 
 				switch optionHeader.ID {
-				case protocol.NEGOTIATION_OPTION_INFO, protocol.NEGOTIATION_OPTION_GO:
+				case protocol.NEGOTIATION_ID_OPTION_INFO, protocol.NEGOTIATION_ID_OPTION_GO:
 					var exportNameLength uint32
 					if err := binary.Read(conn, binary.BigEndian, &exportNameLength); err != nil {
 						panic(err)
@@ -219,10 +219,10 @@ func main() {
 						panic(err)
 					}
 
-					if optionHeader.ID == protocol.NEGOTIATION_OPTION_GO {
-						break l
+					if optionHeader.ID == protocol.NEGOTIATION_ID_OPTION_GO {
+						break n
 					}
-				case protocol.NEGOTIATION_OPTION_ABORT:
+				case protocol.NEGOTIATION_ID_OPTION_ABORT:
 					if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationReplyHeader{
 						ReplyMagic: protocol.NEGOTIATION_MAGIC_REPLY,
 						ID:         optionHeader.ID,
@@ -233,7 +233,7 @@ func main() {
 					}
 
 					return
-				case protocol.NEGOTIATION_OPTION_LIST:
+				case protocol.NEGOTIATION_ID_OPTION_LIST:
 					{
 						info := &bytes.Buffer{}
 
@@ -282,6 +282,32 @@ func main() {
 						ID:         optionHeader.ID,
 						Type:       protocol.NEGOTIATION_TYPE_REPLY_ERR_UNSUPPORTED,
 						Length:     0,
+					}); err != nil {
+						panic(err)
+					}
+				}
+			}
+
+			// Transmission
+			for {
+				var requestHeader protocol.TransmissionRequestHeader
+				if err := binary.Read(conn, binary.BigEndian, &requestHeader); err != nil {
+					panic(err)
+				}
+
+				switch requestHeader.Type {
+				case protocol.TRANSMISSION_TYPE_REQUEST_DISC:
+					return
+				default:
+					_, err := io.CopyN(io.Discard, conn, int64(requestHeader.Length)) // Discard the unknown command
+					if err != nil {
+						panic(err)
+					}
+
+					if err := binary.Write(conn, binary.BigEndian, protocol.TransmissionReplyHeader{
+						ReplyMagic: protocol.TRANSMISSION_MAGIC_REPLY,
+						Error:      protocol.TRANSMISSION_ERROR_EINVAL,
+						Handle:     requestHeader.Handle,
 					}); err != nil {
 						panic(err)
 					}
