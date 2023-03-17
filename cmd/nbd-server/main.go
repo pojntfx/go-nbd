@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -13,7 +12,7 @@ import (
 
 func main() {
 	file := flag.String("file", "tapisk.img", "Path to file to expose")
-	laddr := flag.String("laddr", fmt.Sprintf(":%v", 10809), "Listen address")
+	laddr := flag.String("laddr", ":10809", "Listen address")
 	ro := flag.Bool("ro", false, "Whether the export should be read-only")
 
 	flag.Parse()
