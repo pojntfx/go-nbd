@@ -200,11 +200,11 @@ n:
 
 				exportName := []byte("default")
 
-				if err := binary.Write(info, binary.BigEndian, exportName); err != nil {
+				if err := binary.Write(info, binary.BigEndian, uint32(len(exportName))); err != nil {
 					return err
 				}
 
-				if err := binary.Write(info, binary.BigEndian, uint32(len(exportName))); err != nil {
+				if err := binary.Write(info, binary.BigEndian, exportName); err != nil {
 					return err
 				}
 
