@@ -10,8 +10,8 @@ import (
 	"log"
 	"net"
 	"os"
-	"sync"
 
+	"github.com/pojntfx/tapisk/pkg/backend"
 	"github.com/pojntfx/tapisk/pkg/protocol"
 )
 
@@ -25,19 +25,6 @@ func main() {
 
 	flag.Parse()
 
-	f, err := os.OpenFile(*file, os.O_RDWR, 0644)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
-	var fileLock sync.Mutex
-
-	stat, err := f.Stat()
-	if err != nil {
-		panic(err)
-	}
-
 	l, err := net.Listen("tcp", *laddr)
 	if err != nil {
 		panic(err)
@@ -45,6 +32,19 @@ func main() {
 	defer l.Close()
 
 	log.Println("Listening on", l.Addr())
+
+	fd, err := os.OpenFile(*file, os.O_RDWR, 0644)
+	if err != nil {
+		panic(err)
+	}
+	defer fd.Close()
+
+	f := backend.NewFileBackend(fd)
+
+	size, err := f.Size()
+	if err != nil {
+		panic(err)
+	}
 
 	clients := 0
 	for {
@@ -125,7 +125,7 @@ func main() {
 						info := &bytes.Buffer{}
 						if err := binary.Write(info, binary.BigEndian, protocol.NegotiationReplyInfo{
 							Type:              protocol.NEGOTIATION_TYPE_INFO_EXPORT,
-							Size:              uint64(stat.Size()),
+							Size:              uint64(size),
 							TransmissionFlags: 0,
 						}); err != nil {
 							panic(err)
@@ -313,31 +313,19 @@ func main() {
 
 				switch requestHeader.Type {
 				case protocol.TRANSMISSION_TYPE_REQUEST_READ:
-					fileLock.Lock()
-
 					if err := binary.Write(conn, binary.BigEndian, protocol.TransmissionReplyHeader{
 						ReplyMagic: protocol.TRANSMISSION_MAGIC_REPLY,
 						Error:      0,
 						Handle:     requestHeader.Handle,
 					}); err != nil {
-						fileLock.Unlock()
-
 						panic(err)
 					}
 
 					if _, err := io.CopyN(conn, io.NewSectionReader(f, int64(requestHeader.Offset), int64(requestHeader.Length)), int64(requestHeader.Length)); err != nil {
-						fileLock.Unlock()
-
 						panic(err)
 					}
-
-					fileLock.Unlock()
 				case protocol.TRANSMISSION_TYPE_REQUEST_WRITE:
-					fileLock.Lock()
-
 					if _, err := io.CopyN(io.NewOffsetWriter(f, int64(requestHeader.Offset)), conn, int64(requestHeader.Length)); err != nil {
-						fileLock.Unlock()
-
 						panic(err)
 					}
 
@@ -346,12 +334,8 @@ func main() {
 						Error:      0,
 						Handle:     requestHeader.Handle,
 					}); err != nil {
-						fileLock.Unlock()
-
 						panic(err)
 					}
-
-					fileLock.Unlock()
 				case protocol.TRANSMISSION_TYPE_REQUEST_DISC:
 					if err := f.Sync(); err != nil {
 						panic(err)
