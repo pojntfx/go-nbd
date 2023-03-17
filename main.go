@@ -31,7 +31,37 @@ func main() {
 	}
 	defer f.Close()
 
-	if err := server.Serve(l, backend.NewFileBackend(f)); err != nil {
-		panic(err)
+	b := backend.NewFileBackend(f)
+
+	clients := 0
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			log.Println("Could not accept connection, continuing:", err)
+
+			continue
+		}
+
+		clients++
+
+		log.Printf("%v clients connected", clients)
+
+		go func() {
+			defer func() {
+				_ = conn.Close()
+
+				clients--
+
+				if err := recover(); err != nil {
+					log.Printf("Client disconnected with error: %v", err)
+				}
+
+				log.Printf("%v clients connected", clients)
+			}()
+
+			if err := server.Handle(conn, b); err != nil {
+				panic(err)
+			}
+		}()
 	}
 }
