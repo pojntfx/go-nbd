@@ -14,6 +14,7 @@ import (
 func main() {
 	file := flag.String("file", "tapisk.img", "Path to file to expose")
 	laddr := flag.String("laddr", fmt.Sprintf(":%v", 10809), "Listen address")
+	ro := flag.Bool("ro", false, "Whether the export should be read-only")
 
 	flag.Parse()
 
@@ -59,7 +60,9 @@ func main() {
 				log.Printf("%v clients connected", clients)
 			}()
 
-			if err := server.Handle(conn, b); err != nil {
+			if err := server.Handle(conn, b, &server.Options{
+				ReadOnly: *ro,
+			}); err != nil {
 				panic(err)
 			}
 		}()

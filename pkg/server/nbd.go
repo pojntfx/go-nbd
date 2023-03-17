@@ -15,7 +15,17 @@ var (
 	ErrInvalidMagic = errors.New("invalid magic")
 )
 
-func Handle(conn net.Conn, backend backend.Backend) error {
+type Options struct {
+	ReadOnly bool
+}
+
+func Handle(conn net.Conn, backend backend.Backend, options *Options) error {
+	if options == nil {
+		options = &Options{
+			ReadOnly: false,
+		}
+	}
+
 	size, err := backend.Size()
 	if err != nil {
 		return err
@@ -231,7 +241,7 @@ n:
 				return err
 			}
 		default:
-			_, err := io.CopyN(io.Discard, conn, int64(optionHeader.Length)) // Discard the unknown option
+			_, err := io.CopyN(io.Discard, conn, int64(optionHeader.Length)) // Discard the unknown option's data
 			if err != nil {
 				return err
 			}
@@ -272,6 +282,23 @@ n:
 				return err
 			}
 		case protocol.TRANSMISSION_TYPE_REQUEST_WRITE:
+			if options.ReadOnly {
+				_, err := io.CopyN(io.Discard, conn, int64(requestHeader.Length)) // Discard the write command's data
+				if err != nil {
+					return err
+				}
+
+				if err := binary.Write(conn, binary.BigEndian, protocol.TransmissionReplyHeader{
+					ReplyMagic: protocol.TRANSMISSION_MAGIC_REPLY,
+					Error:      protocol.TRANSMISSION_ERROR_EPERM,
+					Handle:     requestHeader.Handle,
+				}); err != nil {
+					return err
+				}
+
+				break
+			}
+
 			if _, err := io.CopyN(io.NewOffsetWriter(backend, int64(requestHeader.Offset)), conn, int64(requestHeader.Length)); err != nil {
 				return err
 			}
@@ -290,7 +317,7 @@ n:
 
 			return nil
 		default:
-			_, err := io.CopyN(io.Discard, conn, int64(requestHeader.Length)) // Discard the unknown command
+			_, err := io.CopyN(io.Discard, conn, int64(requestHeader.Length)) // Discard the unknown command's data
 			if err != nil {
 				return err
 			}
