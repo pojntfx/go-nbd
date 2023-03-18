@@ -301,8 +301,10 @@ n:
 				return err
 			}
 		case protocol.TRANSMISSION_TYPE_REQUEST_DISC:
-			if err := backend.Sync(); err != nil {
-				return err
+			if !readOnly {
+				if err := backend.Sync(); err != nil {
+					return err
+				}
 			}
 
 			return nil
