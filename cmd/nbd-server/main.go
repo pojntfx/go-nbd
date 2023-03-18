@@ -13,11 +13,12 @@ import (
 func main() {
 	file := flag.String("file", "tapisk.img", "Path to file to expose")
 	laddr := flag.String("laddr", ":10809", "Listen address")
+	network := flag.String("network", "tcp", "Listen network (e.g. `tcp` or `unix`)")
 	ro := flag.Bool("ro", false, "Whether the export should be read-only")
 
 	flag.Parse()
 
-	l, err := net.Listen("tcp", *laddr)
+	l, err := net.Listen(*network, *laddr)
 	if err != nil {
 		panic(err)
 	}
