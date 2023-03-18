@@ -26,9 +26,17 @@ func main() {
 
 	log.Println("Listening on", l.Addr())
 
-	f, err := os.OpenFile(*file, os.O_RDWR, 0644)
-	if err != nil {
-		panic(err)
+	var f *os.File
+	if *ro {
+		f, err = os.OpenFile(*file, os.O_RDONLY, 0644)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		f, err = os.OpenFile(*file, os.O_RDWR, 0644)
+		if err != nil {
+			panic(err)
+		}
 	}
 	defer f.Close()
 
