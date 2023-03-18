@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/signal"
 	"syscall"
 )
 
@@ -16,6 +17,9 @@ var (
 const (
 	// See /usr/include/linux/nbd.h
 	NEGOTIATION_IOCTL_SET_SOCK = 43776
+	NEGOTIATION_IOCTL_DO_IT    = 43779
+
+	TRANSMISSION_IOCTL_DISCONNECT = 43784
 )
 
 func main() {
@@ -31,6 +35,8 @@ func main() {
 	}
 	defer c.Close()
 
+	log.Println("Connected to", c.RemoteAddr())
+
 	f, err := os.Open(*file)
 	if err != nil {
 		panic(err)
@@ -40,6 +46,13 @@ func main() {
 	var cfd uintptr
 	switch c := c.(type) {
 	case *net.TCPConn:
+		file, err := c.File()
+		if err != nil {
+			panic(err)
+		}
+
+		cfd = uintptr(file.Fd())
+	case *net.UnixConn:
 		file, err := c.File()
 		if err != nil {
 			panic(err)
@@ -59,5 +72,32 @@ func main() {
 		panic(err)
 	}
 
-	log.Println("Connected to", c.RemoteAddr())
+	// TODO: Implement client side of the the handshake in userspace and process values from server with `ioctl`s (for `GO` command only)
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt)
+
+	go func() {
+		for range sigCh {
+			if _, _, err := syscall.Syscall(
+				syscall.SYS_IOCTL,
+				f.Fd(),
+				TRANSMISSION_IOCTL_DISCONNECT,
+				0,
+			); err != 0 {
+				panic(err)
+			}
+
+			os.Exit(0)
+		}
+	}()
+
+	if _, _, err := syscall.Syscall(
+		syscall.SYS_IOCTL,
+		f.Fd(),
+		NEGOTIATION_IOCTL_DO_IT,
+		0,
+	); err != 0 {
+		panic(err)
+	}
 }
