@@ -15,17 +15,7 @@ var (
 	ErrInvalidMagic = errors.New("invalid magic")
 )
 
-type Options struct {
-	ReadOnly bool
-}
-
-func Handle(conn net.Conn, backend backend.Backend, options *Options) error {
-	if options == nil {
-		options = &Options{
-			ReadOnly: false,
-		}
-	}
-
+func Handle(conn net.Conn, backend backend.Backend, readOnly bool) error {
 	size, err := backend.Size()
 	if err != nil {
 		return err
@@ -282,7 +272,7 @@ n:
 				return err
 			}
 		case protocol.TRANSMISSION_TYPE_REQUEST_WRITE:
-			if options.ReadOnly {
+			if readOnly {
 				_, err := io.CopyN(io.Discard, conn, int64(requestHeader.Length)) // Discard the write command's data
 				if err != nil {
 					return err

@@ -60,9 +60,7 @@ func main() {
 				log.Printf("%v clients connected", clients)
 			}()
 
-			if err := server.Handle(conn, b, &server.Options{
-				ReadOnly: *ro,
-			}); err != nil {
+			if err := server.Handle(conn, b, *ro); err != nil {
 				panic(err)
 			}
 		}()
