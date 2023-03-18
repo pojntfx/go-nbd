@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"errors"
 	"flag"
 	"log"
@@ -8,6 +9,9 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/pojntfx/tapisk/pkg/protocol"
+	"github.com/pojntfx/tapisk/pkg/server"
 )
 
 var (
@@ -29,13 +33,13 @@ func main() {
 
 	flag.Parse()
 
-	c, err := net.Dial(*network, *raddr)
+	conn, err := net.Dial(*network, *raddr)
 	if err != nil {
 		panic(err)
 	}
-	defer c.Close()
+	defer conn.Close()
 
-	log.Println("Connected to", c.RemoteAddr())
+	log.Println("Connected to", conn.RemoteAddr())
 
 	f, err := os.Open(*file)
 	if err != nil {
@@ -44,7 +48,7 @@ func main() {
 	defer f.Close()
 
 	var cfd uintptr
-	switch c := c.(type) {
+	switch c := conn.(type) {
 	case *net.TCPConn:
 		file, err := c.File()
 		if err != nil {
@@ -72,7 +76,41 @@ func main() {
 		panic(err)
 	}
 
-	// TODO: Implement client side of the the handshake in userspace and process values from server with `ioctl`s (for `GO` command only)
+	var newstyleHeader protocol.NegotiationNewstyleHeader
+	if err := binary.Read(conn, binary.BigEndian, &newstyleHeader); err != nil {
+		panic(err)
+	}
+
+	if newstyleHeader.OldstyleMagic != protocol.NEGOTIATION_MAGIC_OLDSTYLE {
+		panic(server.ErrInvalidMagic)
+	}
+
+	if newstyleHeader.OptionMagic != protocol.NEGOTIATION_MAGIC_OPTION {
+		panic(server.ErrInvalidMagic)
+	}
+
+	if _, err := conn.Write(make([]byte, 4)); err != nil { // Send client flags (uint32)
+		panic(err)
+	}
+
+	if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationOptionHeader{
+		OptionMagic: protocol.NEGOTIATION_MAGIC_OPTION,
+		ID:          protocol.NEGOTIATION_ID_OPTION_GO,
+		Length:      0,
+	}); err != nil {
+		panic(err)
+	}
+
+	// TODO: Implement `NEGOTIATION_ID_OPTION_GO` in userspace
+
+	var replyHeader protocol.NegotiationNewstyleHeader
+	if err := binary.Read(conn, binary.BigEndian, &replyHeader); err != nil {
+		panic(err)
+	}
+
+	if replyHeader.OptionMagic != protocol.NEGOTIATION_MAGIC_REPLY {
+		panic(server.ErrInvalidMagic)
+	}
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt)
