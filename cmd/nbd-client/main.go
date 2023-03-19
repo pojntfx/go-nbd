@@ -147,6 +147,16 @@ func main() {
 		if err := json.NewEncoder(os.Stdout).Encode(exportNames); err != nil {
 			panic(err)
 		}
+
+		if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationOptionHeader{
+			OptionMagic: protocol.NEGOTIATION_MAGIC_OPTION,
+			ID:          protocol.NEGOTIATION_ID_OPTION_ABORT,
+			Length:      0,
+		}); err != nil {
+			panic(err)
+		}
+
+		return
 	}
 
 	if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationOptionHeader{
