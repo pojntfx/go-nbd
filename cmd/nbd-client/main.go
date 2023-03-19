@@ -153,6 +153,17 @@ n:
 				}
 
 				size = info.Size
+			case protocol.NEGOTIATION_TYPE_INFO_NAME:
+				// Discard export name
+			case protocol.NEGOTIATION_TYPE_INFO_DESCRIPTION:
+				// Discard export description
+			case protocol.NEGOTIATION_TYPE_INFO_BLOCKSIZE:
+				var info protocol.NegotiationReplyBlockSize
+				if err := binary.Read(bytes.NewBuffer(infoRaw), binary.BigEndian, &info); err != nil {
+					panic(err)
+				}
+
+				preferredBlockSize = info.PreferredBlockSize
 			default:
 				panic(errUnknownInfo)
 			}

@@ -102,8 +102,8 @@ n:
 					return err
 				}
 
-				if err := binary.Write(info, binary.BigEndian, exportName); err != nil {
-					return err
+				if _, err := info.Write([]byte(exportName)); err != nil {
+					panic(err)
 				}
 
 				if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationReplyHeader{
