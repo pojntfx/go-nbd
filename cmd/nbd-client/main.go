@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"flag"
 	"io"
@@ -35,6 +36,7 @@ func main() {
 	file := flag.String("file", "/dev/nbd0", "Path to device file to create")
 	raddr := flag.String("raddr", "127.0.0.1:10809", "Remote address")
 	network := flag.String("network", "tcp", "Remote network (e.g. `tcp` or `unix`)")
+	list := flag.Bool("list", false, "List the exports and exit")
 
 	flag.Parse()
 
@@ -96,6 +98,55 @@ func main() {
 
 	if _, err := conn.Write(make([]byte, 4)); err != nil { // Send client flags (uint32)
 		panic(err)
+	}
+
+	if *list {
+		if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationOptionHeader{
+			OptionMagic: protocol.NEGOTIATION_MAGIC_OPTION,
+			ID:          protocol.NEGOTIATION_ID_OPTION_LIST,
+			Length:      0,
+		}); err != nil {
+			panic(err)
+		}
+
+		var replyHeader protocol.NegotiationReplyHeader
+		if err := binary.Read(conn, binary.BigEndian, &replyHeader); err != nil {
+			panic(err)
+		}
+
+		if replyHeader.ReplyMagic != protocol.NEGOTIATION_MAGIC_REPLY {
+			panic(server.ErrInvalidMagic)
+		}
+
+		infoRaw := make([]byte, replyHeader.Length)
+		if _, err := io.ReadFull(conn, infoRaw); err != nil {
+			panic(err)
+		}
+
+		info := bytes.NewBuffer(infoRaw)
+
+		exportNames := []string{}
+		for {
+			var exportNameLength uint32
+			if err := binary.Read(info, binary.BigEndian, &exportNameLength); err != nil {
+				if errors.Is(err, io.EOF) {
+					break
+				}
+
+				panic(err)
+			}
+
+			exportName := make([]byte, exportNameLength)
+			if _, err := io.ReadFull(info, exportName); err != nil {
+				panic(err)
+			}
+
+			exportNames = append(exportNames, string(exportName))
+		}
+
+		if err := json.NewEncoder(os.Stdout).Encode(exportNames); err != nil {
+			panic(err)
+		}
 	}
 
 	if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationOptionHeader{
