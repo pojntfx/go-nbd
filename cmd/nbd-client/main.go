@@ -21,6 +21,7 @@ var (
 	errUnsupportedNetwork = errors.New("unsupported network")
 	errUnknownReply       = errors.New("unknown reply")
 	errUnknownInfo        = errors.New("unknown info")
+	errUnknownErr         = errors.New("unknown error")
 )
 
 const (
@@ -36,6 +37,7 @@ func main() {
 	file := flag.String("file", "/dev/nbd0", "Path to device file to create")
 	raddr := flag.String("raddr", "127.0.0.1:10809", "Remote address")
 	network := flag.String("network", "tcp", "Remote network (e.g. `tcp` or `unix`)")
+	export := flag.String("export", "default", "Export name to request")
 	list := flag.Bool("list", false, "List the exports and exit")
 
 	flag.Parse()
@@ -167,12 +169,11 @@ func main() {
 		panic(err)
 	}
 
-	exportName := "default"
-	if err := binary.Write(conn, binary.BigEndian, uint32(len(exportName))); err != nil { // Send export name length (uint32)
+	if err := binary.Write(conn, binary.BigEndian, uint32(len(*export))); err != nil { // Send export name length (uint32)
 		panic(err)
 	}
 
-	if _, err := conn.Write([]byte(exportName)); err != nil {
+	if _, err := conn.Write([]byte(*export)); err != nil {
 		panic(err)
 	}
 
@@ -230,6 +231,8 @@ n:
 			}
 		case protocol.NEGOTIATION_TYPE_REPLY_ACK:
 			break n
+		case protocol.NEGOTIATION_TYPE_REPLY_ERR_UNKNOWN:
+			panic(errUnknownErr)
 		default:
 			panic(errUnknownReply)
 		}
