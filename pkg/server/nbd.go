@@ -15,12 +15,7 @@ var (
 	ErrInvalidMagic = errors.New("invalid magic")
 )
 
-func Handle(conn net.Conn, backend backend.Backend, readOnly bool) error {
-	size, err := backend.Size()
-	if err != nil {
-		return err
-	}
-
+func Handle(conn net.Conn, backends map[string]backend.Backend, readOnly bool) error {
 	// Negotiation
 	if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationNewstyleHeader{
 		OldstyleMagic:  protocol.NEGOTIATION_MAGIC_OLDSTYLE,
@@ -30,10 +25,12 @@ func Handle(conn net.Conn, backend backend.Backend, readOnly bool) error {
 		return err
 	}
 
-	_, err = io.CopyN(io.Discard, conn, 4) // Discard client flags (uint32)
+	_, err := io.CopyN(io.Discard, conn, 4) // Discard client flags (uint32)
 	if err != nil {
 		return err
 	}
+
+	var backend backend.Backend
 
 n:
 	for {
@@ -55,6 +52,30 @@ n:
 
 			exportName := make([]byte, exportNameLength)
 			if _, err := io.ReadFull(conn, exportName); err != nil {
+				return err
+			}
+
+			backend, ok := backends[string(exportName)]
+			if !ok {
+				_, err := io.CopyN(io.Discard, conn, int64(optionHeader.Length)) // Discard the unknown option's data
+				if err != nil {
+					return err
+				}
+
+				if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationReplyHeader{
+					ReplyMagic: protocol.NEGOTIATION_MAGIC_REPLY,
+					ID:         optionHeader.ID,
+					Type:       protocol.NEGOTIATION_TYPE_REPLY_ERR_UNKNOWN,
+					Length:     0,
+				}); err != nil {
+					return err
+				}
+
+				break
+			}
+
+			size, err := backend.Size()
+			if err != nil {
 				return err
 			}
 
