@@ -31,7 +31,6 @@ func Handle(conn net.Conn, backends map[string]backend.Backend, readOnly bool) e
 	}
 
 	var backend backend.Backend
-
 n:
 	for {
 		var optionHeader protocol.NegotiationOptionHeader
@@ -55,11 +54,14 @@ n:
 				return err
 			}
 
-			backend, ok := backends[string(exportName)]
+			var ok bool
+			backend, ok = backends[string(exportName)]
 			if !ok {
-				_, err := io.CopyN(io.Discard, conn, int64(optionHeader.Length)) // Discard the unknown option's data
-				if err != nil {
-					return err
+				if length := int64(optionHeader.Length) - 4 - int64(exportNameLength); length > 0 { // Discard the option's data, minus the export name length and export name we've already read
+					_, err := io.CopyN(io.Discard, conn, length)
+					if err != nil {
+						return err
+					}
 				}
 
 				if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationReplyHeader{
