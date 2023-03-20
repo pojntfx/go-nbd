@@ -221,14 +221,16 @@ n:
 			{
 				info := &bytes.Buffer{}
 
-				exportName := []byte("default")
+				for export := range backends {
+					exportName := []byte(export)
 
-				if err := binary.Write(info, binary.BigEndian, uint32(len(exportName))); err != nil {
-					return err
-				}
+					if err := binary.Write(info, binary.BigEndian, uint32(len(exportName))); err != nil {
+						return err
+					}
 
-				if err := binary.Write(info, binary.BigEndian, exportName); err != nil {
-					return err
+					if err := binary.Write(info, binary.BigEndian, exportName); err != nil {
+						return err
+					}
 				}
 
 				if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationReplyHeader{

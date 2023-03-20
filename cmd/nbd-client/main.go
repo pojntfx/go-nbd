@@ -169,11 +169,13 @@ func main() {
 		panic(err)
 	}
 
-	if err := binary.Write(conn, binary.BigEndian, uint32(len(*export))); err != nil { // Send export name length (uint32)
+	exportName := []byte(*export)
+
+	if err := binary.Write(conn, binary.BigEndian, uint32(len(exportName))); err != nil {
 		panic(err)
 	}
 
-	if _, err := conn.Write([]byte(*export)); err != nil {
+	if _, err := conn.Write([]byte(exportName)); err != nil {
 		panic(err)
 	}
 
