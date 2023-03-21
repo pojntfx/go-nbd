@@ -22,7 +22,32 @@ type Export struct {
 	Backend backend.Backend
 }
 
-func Handle(conn net.Conn, exports []Export, readOnly bool) error {
+type Options struct {
+	ReadOnly           bool
+	MinimumBlockSize   uint32
+	PreferredBlockSize uint32
+	MaximumBlockSize   uint32
+}
+
+func Handle(conn net.Conn, exports []Export, options *Options) error {
+	if options == nil {
+		options = &Options{
+			ReadOnly: false,
+		}
+	}
+
+	if options.MinimumBlockSize == 0 {
+		options.MinimumBlockSize = 1
+	}
+
+	if options.PreferredBlockSize == 0 {
+		options.PreferredBlockSize = 32 * 1024
+	}
+
+	if options.MaximumBlockSize == 0 {
+		options.MaximumBlockSize = 128 * 1024 * 1024
+	}
+
 	// Negotiation
 	if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationNewstyleHeader{
 		OldstyleMagic:  protocol.NEGOTIATION_MAGIC_OLDSTYLE,
@@ -186,9 +211,9 @@ n:
 				info := &bytes.Buffer{}
 				if err := binary.Write(info, binary.BigEndian, protocol.NegotiationReplyBlockSize{
 					Type:               protocol.NEGOTIATION_TYPE_INFO_BLOCKSIZE,
-					MinimumBlockSize:   1,
-					PreferredBlockSize: 32 * 1024,
-					MaximumBlockSize:   128 * 1024 * 1024,
+					MinimumBlockSize:   options.MinimumBlockSize,
+					PreferredBlockSize: options.PreferredBlockSize,
+					MaximumBlockSize:   options.MaximumBlockSize,
 				}); err != nil {
 					return err
 				}
@@ -310,7 +335,7 @@ n:
 				return err
 			}
 		case protocol.TRANSMISSION_TYPE_REQUEST_WRITE:
-			if readOnly {
+			if options.ReadOnly {
 				_, err := io.CopyN(io.Discard, conn, int64(requestHeader.Length)) // Discard the write command's data
 				if err != nil {
 					return err
@@ -339,7 +364,7 @@ n:
 				return err
 			}
 		case protocol.TRANSMISSION_TYPE_REQUEST_DISC:
-			if !readOnly {
+			if !options.ReadOnly {
 				if err := export.Backend.Sync(); err != nil {
 					return err
 				}

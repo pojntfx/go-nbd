@@ -14,7 +14,12 @@ func main() {
 	file := flag.String("file", "tapisk.img", "Path to file to expose")
 	laddr := flag.String("laddr", ":10809", "Listen address")
 	network := flag.String("network", "tcp", "Listen network (e.g. `tcp` or `unix`)")
-	ro := flag.Bool("ro", false, "Whether the export should be read-only")
+	name := flag.String("name", "default", "Export name")
+	description := flag.String("description", "The default export", "Export description")
+	readOnly := flag.Bool("read-only", false, "Whether the export should be read-only")
+	minimumBlockSize := flag.Uint("minimum-block-size", 1, "Minimum block size")
+	preferredBlockSize := flag.Uint("preferred-block-size", 32*1024, "Preferred block size")
+	maximumBlockSize := flag.Uint("maximum-block-size", 128*1024*1024, "Maximum block size")
 
 	flag.Parse()
 
@@ -27,7 +32,7 @@ func main() {
 	log.Println("Listening on", l.Addr())
 
 	var f *os.File
-	if *ro {
+	if *readOnly {
 		f, err = os.OpenFile(*file, os.O_RDONLY, 0644)
 		if err != nil {
 			panic(err)
@@ -72,12 +77,17 @@ func main() {
 				conn,
 				[]server.Export{
 					{
-						Name:        "default",
-						Description: "The default export",
+						Name:        *name,
+						Description: *description,
 						Backend:     b,
 					},
 				},
-				*ro); err != nil {
+				&server.Options{
+					ReadOnly:           *readOnly,
+					MinimumBlockSize:   uint32(*minimumBlockSize),
+					PreferredBlockSize: uint32(*preferredBlockSize),
+					MaximumBlockSize:   uint32(*maximumBlockSize),
+				}); err != nil {
 				panic(err)
 			}
 		}()
