@@ -19,10 +19,11 @@ import (
 )
 
 var (
-	errUnsupportedNetwork = errors.New("unsupported network")
-	errUnknownReply       = errors.New("unknown reply")
-	errUnknownInfo        = errors.New("unknown info")
-	errUnknownErr         = errors.New("unknown error")
+	errUnsupportedNetwork   = errors.New("unsupported network")
+	errUnknownReply         = errors.New("unknown reply")
+	errUnknownInfo          = errors.New("unknown info")
+	errUnknownErr           = errors.New("unknown error")
+	errUnsupportedBlockSize = errors.New("unsupported block size")
 )
 
 func main() {
@@ -31,6 +32,7 @@ func main() {
 	network := flag.String("network", "tcp", "Remote network (e.g. `tcp` or `unix`)")
 	name := flag.String("name", "default", "Export name")
 	list := flag.Bool("list", false, "List the exports and exit")
+	blockSize := flag.Uint("block-size", 0, "Block size to use; 0 uses the server's preferred block size")
 
 	flag.Parse()
 
@@ -176,7 +178,7 @@ func main() {
 	}
 
 	size := uint64(0)
-	preferredBlockSize := uint32(1)
+	chosenBlockSize := uint32(1)
 
 n:
 	for {
@@ -219,7 +221,13 @@ n:
 					panic(err)
 				}
 
-				preferredBlockSize = info.PreferredBlockSize
+				if *blockSize == 0 {
+					chosenBlockSize = info.PreferredBlockSize
+				} else if *blockSize >= uint(info.MinimumBlockSize) && *blockSize <= uint(info.MaximumBlockSize) {
+					chosenBlockSize = uint32(*blockSize)
+				} else {
+					panic(errUnsupportedBlockSize)
+				}
 			default:
 				panic(errUnknownInfo)
 			}
@@ -236,7 +244,7 @@ n:
 		syscall.SYS_IOCTL,
 		f.Fd(),
 		ioctl.NEGOTIATION_IOCTL_SET_SIZE_BLOCKS,
-		uintptr(size/uint64(preferredBlockSize)),
+		uintptr(size/uint64(chosenBlockSize)),
 	); err != 0 {
 		panic(err)
 	}
