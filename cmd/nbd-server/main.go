@@ -68,9 +68,16 @@ func main() {
 				log.Printf("%v clients connected", clients)
 			}()
 
-			if err := server.Handle(conn, map[string]backend.Backend{
-				"default": b,
-			}, *ro); err != nil {
+			if err := server.Handle(
+				conn,
+				[]server.Export{
+					{
+						Name:        "default",
+						Description: "The default export",
+						Backend:     b,
+					},
+				},
+				*ro); err != nil {
 				panic(err)
 			}
 		}()

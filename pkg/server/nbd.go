@@ -15,7 +15,14 @@ var (
 	ErrInvalidMagic = errors.New("invalid magic")
 )
 
-func Handle(conn net.Conn, backends map[string]backend.Backend, readOnly bool) error {
+type Export struct {
+	Name        string
+	Description string
+
+	Backend backend.Backend
+}
+
+func Handle(conn net.Conn, exports []Export, readOnly bool) error {
 	// Negotiation
 	if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationNewstyleHeader{
 		OldstyleMagic:  protocol.NEGOTIATION_MAGIC_OLDSTYLE,
@@ -30,7 +37,7 @@ func Handle(conn net.Conn, backends map[string]backend.Backend, readOnly bool) e
 		return err
 	}
 
-	var backend backend.Backend
+	var export *Export
 n:
 	for {
 		var optionHeader protocol.NegotiationOptionHeader
@@ -54,9 +61,15 @@ n:
 				return err
 			}
 
-			var ok bool
-			backend, ok = backends[string(exportName)]
-			if !ok {
+			for _, candidate := range exports {
+				if candidate.Name == string(exportName) {
+					export = &candidate
+
+					break
+				}
+			}
+
+			if export == nil {
 				if length := int64(optionHeader.Length) - 4 - int64(exportNameLength); length > 0 { // Discard the option's data, minus the export name length and export name we've already read
 					_, err := io.CopyN(io.Discard, conn, length)
 					if err != nil {
@@ -76,7 +89,7 @@ n:
 				break
 			}
 
-			size, err := backend.Size()
+			size, err := export.Backend.Size()
 			if err != nil {
 				return err
 			}
@@ -151,7 +164,7 @@ n:
 					return err
 				}
 
-				if err := binary.Write(info, binary.BigEndian, []byte("Tapisk export")); err != nil {
+				if err := binary.Write(info, binary.BigEndian, []byte(export.Description)); err != nil {
 					return err
 				}
 
@@ -221,8 +234,8 @@ n:
 			{
 				info := &bytes.Buffer{}
 
-				for export := range backends {
-					exportName := []byte(export)
+				for _, export := range exports {
+					exportName := []byte(export.Name)
 
 					if err := binary.Write(info, binary.BigEndian, uint32(len(exportName))); err != nil {
 						return err
@@ -293,7 +306,7 @@ n:
 				return err
 			}
 
-			if _, err := io.CopyN(conn, io.NewSectionReader(backend, int64(requestHeader.Offset), int64(requestHeader.Length)), int64(requestHeader.Length)); err != nil {
+			if _, err := io.CopyN(conn, io.NewSectionReader(export.Backend, int64(requestHeader.Offset), int64(requestHeader.Length)), int64(requestHeader.Length)); err != nil {
 				return err
 			}
 		case protocol.TRANSMISSION_TYPE_REQUEST_WRITE:
@@ -314,7 +327,7 @@ n:
 				break
 			}
 
-			if _, err := io.CopyN(io.NewOffsetWriter(backend, int64(requestHeader.Offset)), conn, int64(requestHeader.Length)); err != nil {
+			if _, err := io.CopyN(io.NewOffsetWriter(export.Backend, int64(requestHeader.Offset)), conn, int64(requestHeader.Length)); err != nil {
 				return err
 			}
 
@@ -327,7 +340,7 @@ n:
 			}
 		case protocol.TRANSMISSION_TYPE_REQUEST_DISC:
 			if !readOnly {
-				if err := backend.Sync(); err != nil {
+				if err := export.Backend.Sync(); err != nil {
 					return err
 				}
 			}
