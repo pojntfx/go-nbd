@@ -49,6 +49,17 @@ func negotiateNewstyle(conn net.Conn) error {
 }
 
 func Connect(conn net.Conn, device *os.File, options *Options) error {
+	if options == nil {
+		options = &Options{
+			ExportName: "default",
+			BlockSize:  0,
+		}
+	}
+
+	if options.ExportName == "" {
+		options.ExportName = "default"
+	}
+
 	var cfd uintptr
 	switch c := conn.(type) {
 	case *net.TCPConn:
