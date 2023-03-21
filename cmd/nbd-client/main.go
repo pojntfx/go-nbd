@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/pojntfx/tapisk/pkg/ioctl"
 	"github.com/pojntfx/tapisk/pkg/protocol"
 	"github.com/pojntfx/tapisk/pkg/server"
 )
@@ -24,20 +25,11 @@ var (
 	errUnknownErr         = errors.New("unknown error")
 )
 
-const (
-	// See /usr/include/linux/nbd.h
-	NEGOTIATION_IOCTL_SET_SOCK        = 43776
-	NEGOTIATION_IOCTL_SET_SIZE_BLOCKS = 43783
-	NEGOTIATION_IOCTL_DO_IT           = 43779
-
-	TRANSMISSION_IOCTL_DISCONNECT = 43784
-)
-
 func main() {
 	file := flag.String("file", "/dev/nbd0", "Path to device file to create")
 	raddr := flag.String("raddr", "127.0.0.1:10809", "Remote address")
 	network := flag.String("network", "tcp", "Remote network (e.g. `tcp` or `unix`)")
-	export := flag.String("export", "default", "Export name to request")
+	name := flag.String("name", "default", "Export name")
 	list := flag.Bool("list", false, "List the exports and exit")
 
 	flag.Parse()
@@ -79,7 +71,7 @@ func main() {
 	if _, _, err := syscall.Syscall(
 		syscall.SYS_IOCTL,
 		f.Fd(),
-		NEGOTIATION_IOCTL_SET_SOCK,
+		ioctl.NEGOTIATION_IOCTL_SET_SOCK,
 		uintptr(cfd),
 	); err != 0 {
 		panic(err)
@@ -169,7 +161,7 @@ func main() {
 		panic(err)
 	}
 
-	exportName := []byte(*export)
+	exportName := []byte(*name)
 
 	if err := binary.Write(conn, binary.BigEndian, uint32(len(exportName))); err != nil {
 		panic(err)
@@ -243,7 +235,7 @@ n:
 	if _, _, err := syscall.Syscall(
 		syscall.SYS_IOCTL,
 		f.Fd(),
-		NEGOTIATION_IOCTL_SET_SIZE_BLOCKS,
+		ioctl.NEGOTIATION_IOCTL_SET_SIZE_BLOCKS,
 		uintptr(size/uint64(preferredBlockSize)),
 	); err != 0 {
 		panic(err)
@@ -257,7 +249,7 @@ n:
 			if _, _, err := syscall.Syscall(
 				syscall.SYS_IOCTL,
 				f.Fd(),
-				TRANSMISSION_IOCTL_DISCONNECT,
+				ioctl.TRANSMISSION_IOCTL_DISCONNECT,
 				0,
 			); err != 0 {
 				panic(err)
@@ -270,7 +262,7 @@ n:
 	if _, _, err := syscall.Syscall(
 		syscall.SYS_IOCTL,
 		f.Fd(),
-		NEGOTIATION_IOCTL_DO_IT,
+		ioctl.NEGOTIATION_IOCTL_DO_IT,
 		0,
 	); err != 0 {
 		panic(err)
