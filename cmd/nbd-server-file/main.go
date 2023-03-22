@@ -6,7 +6,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/pojntfx/tapisk/pkg/backend"
+	"github.com/pojntfx/tapisk/pkg/backends"
 	"github.com/pojntfx/tapisk/pkg/server"
 )
 
@@ -45,7 +45,7 @@ func main() {
 	}
 	defer f.Close()
 
-	b := backend.NewFileBackend(f)
+	b := backends.NewFileBackend(f)
 
 	clients := 0
 	for {

@@ -7,7 +7,6 @@ import (
 	"io"
 	"net"
 
-	"github.com/pojntfx/tapisk/pkg/backend"
 	"github.com/pojntfx/tapisk/pkg/protocol"
 )
 
@@ -15,11 +14,19 @@ var (
 	ErrInvalidMagic = errors.New("invalid magic")
 )
 
+type Backend interface {
+	io.ReaderAt
+	io.WriterAt
+
+	Size() (int64, error)
+	Sync() error
+}
+
 type Export struct {
 	Name        string
 	Description string
 
-	Backend backend.Backend
+	Backend Backend
 }
 
 type Options struct {
@@ -164,7 +171,7 @@ n:
 				}
 
 				if _, err := info.Write([]byte(exportName)); err != nil {
-					panic(err)
+					return err
 				}
 
 				if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationReplyHeader{

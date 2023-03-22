@@ -5,7 +5,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/pojntfx/tapisk/pkg/backend"
+	"github.com/pojntfx/tapisk/pkg/backends"
 	"github.com/pojntfx/tapisk/pkg/server"
 )
 
@@ -30,7 +30,7 @@ func main() {
 
 	log.Println("Listening on", l.Addr())
 
-	b := backend.NewMemoryBackend(make([]byte, *size))
+	b := backends.NewMemoryBackend(make([]byte, *size))
 
 	clients := 0
 	for {
