@@ -41,11 +41,11 @@ func Handle(conn net.Conn, exports []Export, options *Options) error {
 	}
 
 	if options.PreferredBlockSize == 0 {
-		options.PreferredBlockSize = 32 * 1024
+		options.PreferredBlockSize = 4096
 	}
 
 	if options.MaximumBlockSize == 0 {
-		options.MaximumBlockSize = 128 * 1024 * 1024
+		options.MaximumBlockSize = 0xffffffff
 	}
 
 	// Negotiation
