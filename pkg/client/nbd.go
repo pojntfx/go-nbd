@@ -181,6 +181,15 @@ n:
 	if _, _, err := syscall.Syscall(
 		syscall.SYS_IOCTL,
 		device.Fd(),
+		ioctl.NEGOTIATION_IOCTL_SET_BLOCKSIZE,
+		uintptr(chosenBlockSize),
+	); err != 0 {
+		return err
+	}
+
+	if _, _, err := syscall.Syscall(
+		syscall.SYS_IOCTL,
+		device.Fd(),
 		ioctl.NEGOTIATION_IOCTL_SET_SIZE_BLOCKS,
 		uintptr(size/uint64(chosenBlockSize)),
 	); err != 0 {
