@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 
+	"github.com/pojntfx/tapisk/pkg/backend"
 	"github.com/pojntfx/tapisk/pkg/protocol"
 )
 
@@ -14,19 +15,11 @@ var (
 	ErrInvalidMagic = errors.New("invalid magic")
 )
 
-type Backend interface {
-	io.ReaderAt
-	io.WriterAt
-
-	Size() (int64, error)
-	Sync() error
-}
-
 type Export struct {
 	Name        string
 	Description string
 
-	Backend Backend
+	Backend backend.Backend
 }
 
 type Options struct {

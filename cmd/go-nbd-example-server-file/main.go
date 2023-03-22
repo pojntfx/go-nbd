@@ -6,12 +6,12 @@ import (
 	"net"
 	"os"
 
-	"github.com/pojntfx/tapisk/pkg/backends"
+	"github.com/pojntfx/tapisk/pkg/backend"
 	"github.com/pojntfx/tapisk/pkg/server"
 )
 
 func main() {
-	file := flag.String("file", "tapisk.img", "Path to file to expose")
+	file := flag.String("file", "disk.img", "Path to file to expose")
 	laddr := flag.String("laddr", ":10809", "Listen address")
 	network := flag.String("network", "tcp", "Listen network (e.g. `tcp` or `unix`)")
 	name := flag.String("name", "default", "Export name")
@@ -45,7 +45,7 @@ func main() {
 	}
 	defer f.Close()
 
-	b := backends.NewFileBackend(f)
+	b := backend.NewFileBackend(f)
 
 	clients := 0
 	for {

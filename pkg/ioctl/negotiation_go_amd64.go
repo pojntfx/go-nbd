@@ -1,3 +1,5 @@
+//go:build linux && !cgo && amd64
+
 package ioctl
 
 // See /usr/include/linux/nbd.h

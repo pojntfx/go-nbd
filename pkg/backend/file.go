@@ -1,4 +1,4 @@
-package backends
+package backend
 
 import (
 	"os"
