@@ -1,6 +1,6 @@
-# tapisk
+# go-nbd
 
-Expose a tape drive as a block device.
+Pure Go NBD server and client library.
 
 ## Overview
 
@@ -8,6 +8,6 @@ Expose a tape drive as a block device.
 
 ## License
 
-tapisk (c) 2023 Felicitas Pojtinger and contributors
+go-nbd (c) 2023 Felicitas Pojtinger and contributors
 
-SPDX-License-Identifier: AGPL-3.0
+SPDX-License-Identifier: Apache-2.0

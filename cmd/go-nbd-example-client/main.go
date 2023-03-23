@@ -8,7 +8,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/pojntfx/tapisk/pkg/client"
+	"github.com/pojntfx/go-nbd/pkg/client"
 )
 
 func main() {

@@ -6,8 +6,8 @@ import (
 	"net"
 	"os"
 
-	"github.com/pojntfx/tapisk/pkg/backend"
-	"github.com/pojntfx/tapisk/pkg/server"
+	"github.com/pojntfx/go-nbd/pkg/backend"
+	"github.com/pojntfx/go-nbd/pkg/server"
 )
 
 func main() {

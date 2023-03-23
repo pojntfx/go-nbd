@@ -9,9 +9,9 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/pojntfx/tapisk/pkg/ioctl"
-	"github.com/pojntfx/tapisk/pkg/protocol"
-	"github.com/pojntfx/tapisk/pkg/server"
+	"github.com/pojntfx/go-nbd/pkg/ioctl"
+	"github.com/pojntfx/go-nbd/pkg/protocol"
+	"github.com/pojntfx/go-nbd/pkg/server"
 )
 
 var (
