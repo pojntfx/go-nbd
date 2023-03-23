@@ -1,5 +1,7 @@
 # go-nbd
 
+![Logo](./docs/logo-readme.png)
+
 Pure Go NBD server and client library.
 
 ## Overview
