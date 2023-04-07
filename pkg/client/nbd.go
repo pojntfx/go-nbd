@@ -23,8 +23,9 @@ var (
 )
 
 type Options struct {
-	ExportName string
-	BlockSize  uint32
+	ExportName  string
+	BlockSize   uint32
+	OnConnected func()
 }
 
 func negotiateNewstyle(conn net.Conn) error {
@@ -51,8 +52,9 @@ func negotiateNewstyle(conn net.Conn) error {
 func Connect(conn net.Conn, device *os.File, options *Options) error {
 	if options == nil {
 		options = &Options{
-			ExportName: "default",
-			BlockSize:  0,
+			ExportName:  "default",
+			BlockSize:   0,
+			OnConnected: func() {},
 		}
 	}
 
@@ -194,6 +196,10 @@ n:
 		uintptr(size/uint64(chosenBlockSize)),
 	); err != 0 {
 		return err
+	}
+
+	if options.OnConnected != nil {
+		options.OnConnected()
 	}
 
 	if _, _, err := syscall.Syscall(
