@@ -26,6 +26,7 @@ type Options struct {
 	ExportName  string
 	BlockSize   uint32
 	OnConnected func()
+	Timeout     int
 }
 
 func negotiateNewstyle(conn net.Conn) error {
@@ -55,6 +56,7 @@ func Connect(conn net.Conn, device *os.File, options *Options) error {
 			ExportName:  "default",
 			BlockSize:   0,
 			OnConnected: func() {},
+			Timeout:     0,
 		}
 	}
 
@@ -198,6 +200,15 @@ n:
 		return err
 	}
 
+	if _, _, err := syscall.Syscall(
+		syscall.SYS_IOCTL,
+		device.Fd(),
+		ioctl.NEGOTIATION_IOCTL_SET_TIMEOUT,
+		uintptr(options.Timeout),
+	); err != 0 {
+		return err
+	}
+
 	if options.OnConnected != nil {
 		options.OnConnected()
 	}
@@ -228,6 +239,15 @@ func Disconnect(device *os.File) error {
 		syscall.SYS_IOCTL,
 		device.Fd(),
 		ioctl.TRANSMISSION_IOCTL_CLEAR_SOCK,
+		0,
+	); err != 0 {
+		return err
+	}
+
+	if _, _, err := syscall.Syscall(
+		syscall.SYS_IOCTL,
+		device.Fd(),
+		ioctl.TRANSMISSION_IOCTL_CLEAR_QUE,
 		0,
 	); err != 0 {
 		return err
