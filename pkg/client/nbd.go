@@ -229,6 +229,15 @@ func Disconnect(device *os.File) error {
 	if _, _, err := syscall.Syscall(
 		syscall.SYS_IOCTL,
 		device.Fd(),
+		ioctl.TRANSMISSION_IOCTL_CLEAR_QUE,
+		0,
+	); err != 0 {
+		return err
+	}
+
+	if _, _, err := syscall.Syscall(
+		syscall.SYS_IOCTL,
+		device.Fd(),
 		ioctl.TRANSMISSION_IOCTL_DISCONNECT,
 		0,
 	); err != 0 {
@@ -239,15 +248,6 @@ func Disconnect(device *os.File) error {
 		syscall.SYS_IOCTL,
 		device.Fd(),
 		ioctl.TRANSMISSION_IOCTL_CLEAR_SOCK,
-		0,
-	); err != 0 {
-		return err
-	}
-
-	if _, _, err := syscall.Syscall(
-		syscall.SYS_IOCTL,
-		device.Fd(),
-		ioctl.TRANSMISSION_IOCTL_CLEAR_QUE,
 		0,
 	); err != 0 {
 		return err
