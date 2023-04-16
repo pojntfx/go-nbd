@@ -224,6 +224,15 @@ func Disconnect(device *os.File) error {
 		return err
 	}
 
+	if _, _, err := syscall.Syscall(
+		syscall.SYS_IOCTL,
+		device.Fd(),
+		ioctl.TRANSMISSION_IOCTL_CLEAR_SOCK,
+		0,
+	); err != 0 {
+		return err
+	}
+
 	return nil
 }
 
