@@ -52,12 +52,7 @@ func negotiateNewstyle(conn net.Conn) error {
 
 func Connect(conn net.Conn, device *os.File, options *Options) error {
 	if options == nil {
-		options = &Options{
-			ExportName:  "default",
-			BlockSize:   0,
-			OnConnected: func() {},
-			Timeout:     0,
-		}
+		options = &Options{}
 	}
 
 	if options.ExportName == "" {
