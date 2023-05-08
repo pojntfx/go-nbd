@@ -9,6 +9,7 @@ import (
 	"os"
 	"syscall"
 
+	"github.com/pilebones/go-udev/netlink"
 	"github.com/pojntfx/go-nbd/pkg/ioctl"
 	"github.com/pojntfx/go-nbd/pkg/protocol"
 	"github.com/pojntfx/go-nbd/pkg/server"
@@ -77,6 +78,45 @@ func Connect(conn net.Conn, device *os.File, options *Options) error {
 		cfd = uintptr(file.Fd())
 	default:
 		return ErrUnsupportedNetwork
+	}
+
+	fatal := make(chan error)
+	if options.OnConnected != nil {
+		udevConn := new(netlink.UEventConn)
+		if err := udevConn.Connect(netlink.UdevEvent); err != nil {
+			return err
+		}
+		defer udevConn.Close()
+
+		var (
+			udevReadyCh = make(chan netlink.UEvent)
+			udevErrCh   = make(chan error)
+			udevQuit    = udevConn.Monitor(udevReadyCh, udevErrCh, &netlink.RuleDefinitions{
+				Rules: []netlink.RuleDefinition{
+					{
+						Env: map[string]string{
+							"DEVNAME": device.Name(),
+						},
+					},
+				},
+			})
+		)
+		defer close(udevQuit)
+
+		go func() {
+			select {
+			case <-udevReadyCh:
+				close(udevQuit)
+
+				options.OnConnected()
+
+				return
+			case err := <-udevErrCh:
+				fatal <- err
+
+				return
+			}
+		}()
 	}
 
 	if _, _, err := syscall.Syscall(
@@ -204,20 +244,20 @@ n:
 		return err
 	}
 
-	if options.OnConnected != nil {
-		options.OnConnected()
-	}
+	go func() {
+		if _, _, err := syscall.Syscall(
+			syscall.SYS_IOCTL,
+			device.Fd(),
+			ioctl.NEGOTIATION_IOCTL_DO_IT,
+			0,
+		); err != 0 {
+			fatal <- err
 
-	if _, _, err := syscall.Syscall(
-		syscall.SYS_IOCTL,
-		device.Fd(),
-		ioctl.NEGOTIATION_IOCTL_DO_IT,
-		0,
-	); err != 0 {
-		return err
-	}
+			return
+		}
+	}()
 
-	return nil
+	return <-fatal
 }
 
 func Disconnect(device *os.File) error {
