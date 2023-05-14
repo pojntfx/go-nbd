@@ -12,7 +12,8 @@ import (
 )
 
 var (
-	ErrInvalidMagic = errors.New("invalid magic")
+	ErrInvalidMagic     = errors.New("invalid magic")
+	ErrInvalidBlocksize = errors.New("invalid blocksize")
 )
 
 type Export struct {
@@ -311,6 +312,7 @@ n:
 	}
 
 	// Transmission
+	b := make([]byte, options.MaximumBlockSize)
 	for {
 		var requestHeader protocol.TransmissionRequestHeader
 		if err := binary.Read(conn, binary.BigEndian, &requestHeader); err != nil {
@@ -331,7 +333,16 @@ n:
 				return err
 			}
 
-			if _, err := io.CopyN(conn, io.NewSectionReader(export.Backend, int64(requestHeader.Offset), int64(requestHeader.Length)), int64(requestHeader.Length)); err != nil {
+			if len(b) <= int(requestHeader.Length) {
+				return ErrInvalidBlocksize
+			}
+
+			n, err := export.Backend.ReadAt(b[:requestHeader.Length], int64(requestHeader.Offset))
+			if err != nil {
+				return err
+			}
+
+			if _, err := conn.Write(b[:n]); err != nil {
 				return err
 			}
 		case protocol.TRANSMISSION_TYPE_REQUEST_WRITE:
@@ -352,7 +363,16 @@ n:
 				break
 			}
 
-			if _, err := io.CopyN(io.NewOffsetWriter(export.Backend, int64(requestHeader.Offset)), conn, int64(requestHeader.Length)); err != nil {
+			if len(b) <= int(requestHeader.Length) {
+				return ErrInvalidBlocksize
+			}
+
+			n, err := conn.Read(b[:requestHeader.Length])
+			if err != nil {
+				return err
+			}
+
+			if _, err := export.Backend.WriteAt(b[:n], int64(requestHeader.Offset)); err != nil {
 				return err
 			}
 
