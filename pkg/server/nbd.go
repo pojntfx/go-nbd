@@ -367,7 +367,7 @@ n:
 				return ErrInvalidBlocksize
 			}
 
-			n, err := conn.Read(b[:requestHeader.Length])
+			n, err := io.ReadAtLeast(conn, b[:requestHeader.Length], int(requestHeader.Length))
 			if err != nil {
 				return err
 			}
