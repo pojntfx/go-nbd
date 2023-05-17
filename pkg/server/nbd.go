@@ -16,6 +16,10 @@ var (
 	ErrInvalidBlocksize = errors.New("invalid blocksize")
 )
 
+const (
+	maximumPacketSize = 32 * 1024 * 1024 // Support for a 32M maximum packet size is expected: https://sourceforge.net/p/nbd/mailman/message/35081223/
+)
+
 type Export struct {
 	Name        string
 	Description string
@@ -46,7 +50,7 @@ func Handle(conn net.Conn, exports []Export, options *Options) error {
 	}
 
 	if options.MaximumBlockSize == 0 {
-		options.MaximumBlockSize = 0xffffffff
+		options.MaximumBlockSize = maximumPacketSize
 	}
 
 	// Negotiation
@@ -312,7 +316,7 @@ n:
 	}
 
 	// Transmission
-	b := make([]byte, options.MaximumBlockSize)
+	b := make([]byte, maximumPacketSize)
 	for {
 		var requestHeader protocol.TransmissionRequestHeader
 		if err := binary.Read(conn, binary.BigEndian, &requestHeader); err != nil {
