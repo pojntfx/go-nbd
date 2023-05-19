@@ -7,7 +7,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -131,7 +130,7 @@ func Connect(conn net.Conn, device *os.File, options *Options) error {
 			}()
 		} else {
 			go func() {
-				sizeFile, err := os.Open(path.Join("/sys", "block", filepath.Base(device.Name()), "size"))
+				sizeFile, err := os.Open(filepath.Join("/sys", "block", filepath.Base(device.Name()), "size"))
 				if err != nil {
 					fatal <- err
 
