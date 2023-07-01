@@ -19,12 +19,20 @@ import (
 	"github.com/pojntfx/go-nbd/pkg/server"
 )
 
+const (
+	MinimumBlockSize = 512  // This is the minimum value that works in practice, else the client stops with "invalid argument"
+	MaximumBlockSize = 4096 // This is the maximum value that works in practice, else the client stops with "invalid argument"
+)
+
 var (
-	ErrUnsupportedNetwork   = errors.New("unsupported network")
-	ErrUnknownReply         = errors.New("unknown reply")
-	ErrUnknownInfo          = errors.New("unknown info")
-	ErrUnknownErr           = errors.New("unknown error")
-	ErrUnsupportedBlockSize = errors.New("unsupported block size")
+	ErrUnsupportedNetwork         = errors.New("unsupported network")
+	ErrUnknownReply               = errors.New("unknown reply")
+	ErrUnknownInfo                = errors.New("unknown info")
+	ErrUnknownErr                 = errors.New("unknown error")
+	ErrUnsupportedServerBlockSize = errors.New("server proposed unsupported block size")
+	ErrMinimumBlockSize           = errors.New("block size below mimimum requested")
+	ErrMaximumBlockSize           = errors.New("block size above maximum requested")
+	ErrBlockSizeNotPowerOfTwo     = errors.New("block size is not a power of 2")
 )
 
 type Options struct {
@@ -255,7 +263,17 @@ n:
 				} else if options.BlockSize >= info.MinimumBlockSize && options.BlockSize <= info.MaximumBlockSize {
 					chosenBlockSize = options.BlockSize
 				} else {
-					return ErrUnsupportedBlockSize
+					return ErrUnsupportedServerBlockSize
+				}
+
+				if chosenBlockSize > MaximumBlockSize {
+					return ErrMaximumBlockSize
+				} else if chosenBlockSize < MinimumBlockSize {
+					return ErrMinimumBlockSize
+				}
+
+				if !((chosenBlockSize > 0) && ((chosenBlockSize & (chosenBlockSize - 1)) == 0)) {
+					return ErrBlockSizeNotPowerOfTwo
 				}
 			default:
 				return ErrUnknownInfo
