@@ -315,6 +315,10 @@ n:
 	}
 
 	go func() {
+		defer func() {
+			close(fatal)
+		}()
+
 		if _, _, err := syscall.Syscall(
 			syscall.SYS_IOCTL,
 			device.Fd(),
