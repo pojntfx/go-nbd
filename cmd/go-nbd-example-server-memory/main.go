@@ -60,7 +60,7 @@ func main() {
 
 			if err := server.Handle(
 				conn,
-				[]server.Export{
+				[]*server.Export{
 					{
 						Name:        *name,
 						Description: *description,

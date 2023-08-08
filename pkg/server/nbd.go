@@ -34,7 +34,7 @@ type Options struct {
 	MaximumBlockSize   uint32
 }
 
-func Handle(conn net.Conn, exports []Export, options *Options) error {
+func Handle(conn net.Conn, exports []*Export, options *Options) error {
 	if options == nil {
 		options = &Options{
 			ReadOnly: false,
@@ -93,7 +93,7 @@ n:
 
 			for _, candidate := range exports {
 				if candidate.Name == string(exportName) {
-					export = &candidate
+					export = candidate
 
 					break
 				}
