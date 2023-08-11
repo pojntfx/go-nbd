@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/pojntfx/go-nbd/pkg/backend"
+	"github.com/pojntfx/go-nbd/pkg/client"
 	"github.com/pojntfx/go-nbd/pkg/server"
 )
 
@@ -17,7 +18,7 @@ func main() {
 	description := flag.String("description", "The default export", "Export description")
 	readOnly := flag.Bool("read-only", false, "Whether the export should be read-only")
 	minimumBlockSize := flag.Uint("minimum-block-size", 1, "Minimum block size")
-	preferredBlockSize := flag.Uint("preferred-block-size", 4096, "Preferred block size")
+	preferredBlockSize := flag.Uint("preferred-block-size", client.MaximumBlockSize, "Preferred block size")
 	maximumBlockSize := flag.Uint("maximum-block-size", 0xffffffff, "Maximum block size")
 
 	flag.Parse()
