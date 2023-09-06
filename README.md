@@ -135,7 +135,7 @@ See [cmd/go-nbd-example-server-file/main.go](./cmd/go-nbd-example-server-file/ma
 
 ### 3. Connect to the Server with a Client
 
-In a new `main` package, connect to the server by creating a client; note that you'll have to `modprobe ndb` and run the command as `root`:
+In a new `main` package, connect to the server by creating a client; note that you'll have to `modprobe nbd` and run the command as `root`:
 
 ```go
 // client/main.go
