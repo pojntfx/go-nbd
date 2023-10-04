@@ -12,12 +12,13 @@ import (
 )
 
 var (
-	ErrInvalidMagic     = errors.New("invalid magic")
-	ErrInvalidBlocksize = errors.New("invalid blocksize")
+	ErrInvalidMagic       = errors.New("invalid magic")
+	ErrInvalidBlocksize   = errors.New("invalid blocksize")
+	ErrInvalidRequestSize = errors.New("invalid request size")
 )
 
 const (
-	maximumPacketSize = 32 * 1024 * 1024 // Support for a 32M maximum packet size is expected: https://sourceforge.net/p/nbd/mailman/message/35081223/
+	DefaultMaximumRequestSize = 32 * 1024 * 1024 // Support for a 32M maximum packet size is expected: https://sourceforge.net/p/nbd/mailman/message/35081223/
 )
 
 type Export struct {
@@ -28,10 +29,13 @@ type Export struct {
 }
 
 type Options struct {
-	ReadOnly           bool
+	ReadOnly bool
+
 	MinimumBlockSize   uint32
 	PreferredBlockSize uint32
 	MaximumBlockSize   uint32
+
+	MaximumRequestSize int
 }
 
 func Handle(conn net.Conn, exports []*Export, options *Options) error {
@@ -50,7 +54,11 @@ func Handle(conn net.Conn, exports []*Export, options *Options) error {
 	}
 
 	if options.MaximumBlockSize == 0 {
-		options.MaximumBlockSize = maximumPacketSize
+		options.MaximumBlockSize = DefaultMaximumRequestSize
+	}
+
+	if options.MaximumRequestSize == 0 {
+		options.MaximumRequestSize = DefaultMaximumRequestSize
 	}
 
 	// Negotiation
@@ -316,7 +324,6 @@ n:
 	}
 
 	// Transmission
-	b := make([]byte, maximumPacketSize)
 	for {
 		var requestHeader protocol.TransmissionRequestHeader
 		if err := binary.Read(conn, binary.BigEndian, &requestHeader); err != nil {
@@ -326,6 +333,13 @@ n:
 		if requestHeader.RequestMagic != protocol.TRANSMISSION_MAGIC_REQUEST {
 			return ErrInvalidMagic
 		}
+
+		length := requestHeader.Length
+		if length > DefaultMaximumRequestSize {
+			return ErrInvalidRequestSize
+		}
+
+		b := make([]byte, length)
 
 		switch requestHeader.Type {
 		case protocol.TRANSMISSION_TYPE_REQUEST_READ:
@@ -337,11 +351,11 @@ n:
 				return err
 			}
 
-			if len(b) <= int(requestHeader.Length) {
+			if len(b) < int(requestHeader.Length) {
 				return ErrInvalidBlocksize
 			}
 
-			n, err := export.Backend.ReadAt(b[:requestHeader.Length], int64(requestHeader.Offset))
+			n, err := export.Backend.ReadAt(b, int64(requestHeader.Offset))
 			if err != nil {
 				return err
 			}
@@ -367,11 +381,11 @@ n:
 				break
 			}
 
-			if len(b) <= int(requestHeader.Length) {
+			if len(b) < int(requestHeader.Length) {
 				return ErrInvalidBlocksize
 			}
 
-			n, err := io.ReadAtLeast(conn, b[:requestHeader.Length], int(requestHeader.Length))
+			n, err := io.ReadAtLeast(conn, b, int(requestHeader.Length))
 			if err != nil {
 				return err
 			}
