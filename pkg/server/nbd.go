@@ -18,7 +18,7 @@ var (
 )
 
 const (
-	DefaultMaximumRequestSize = 32 * 1024 * 1024 // Support for a 32M maximum packet size is expected: https://sourceforge.net/p/nbd/mailman/message/35081223/
+	defaultMaximumRequestSize = 32 * 1024 * 1024 // Support for a 32M maximum packet size is expected: https://sourceforge.net/p/nbd/mailman/message/35081223/
 )
 
 type Export struct {
@@ -36,12 +36,14 @@ type Options struct {
 	MaximumBlockSize   uint32
 
 	MaximumRequestSize int
+	SupportsMultiConn  bool
 }
 
 func Handle(conn net.Conn, exports []*Export, options *Options) error {
 	if options == nil {
 		options = &Options{
-			ReadOnly: false,
+			ReadOnly:          false,
+			SupportsMultiConn: true,
 		}
 	}
 
@@ -54,11 +56,11 @@ func Handle(conn net.Conn, exports []*Export, options *Options) error {
 	}
 
 	if options.MaximumBlockSize == 0 {
-		options.MaximumBlockSize = DefaultMaximumRequestSize
+		options.MaximumBlockSize = defaultMaximumRequestSize
 	}
 
 	if options.MaximumRequestSize == 0 {
-		options.MaximumRequestSize = DefaultMaximumRequestSize
+		options.MaximumRequestSize = defaultMaximumRequestSize
 	}
 
 	// Negotiation
@@ -145,11 +147,16 @@ n:
 			}
 
 			{
+				transmissionFlags := uint16(0)
+				if options.SupportsMultiConn {
+					transmissionFlags = protocol.NEGOTIATION_REPLY_FLAGS_HAS_FLAGS | protocol.NEGOTIATION_REPLY_FLAGS_CAN_MULTI_CONN
+				}
+
 				info := &bytes.Buffer{}
 				if err := binary.Write(info, binary.BigEndian, protocol.NegotiationReplyInfo{
 					Type:              protocol.NEGOTIATION_TYPE_INFO_EXPORT,
 					Size:              uint64(size),
-					TransmissionFlags: 0,
+					TransmissionFlags: transmissionFlags,
 				}); err != nil {
 					return err
 				}
@@ -335,7 +342,7 @@ n:
 		}
 
 		length := requestHeader.Length
-		if length > DefaultMaximumRequestSize {
+		if length > defaultMaximumRequestSize {
 			return ErrInvalidRequestSize
 		}
 

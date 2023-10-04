@@ -24,6 +24,9 @@ const (
 	NEGOTIATION_TYPE_INFO_NAME        = uint16(1)
 	NEGOTIATION_TYPE_INFO_DESCRIPTION = uint16(2)
 	NEGOTIATION_TYPE_INFO_BLOCKSIZE   = uint16(3)
+
+	NEGOTIATION_REPLY_FLAGS_HAS_FLAGS      = uint16((1 << 0))
+	NEGOTIATION_REPLY_FLAGS_CAN_MULTI_CONN = uint16((1 << 8))
 )
 
 type NegotiationNewstyleHeader struct {
