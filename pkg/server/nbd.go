@@ -391,7 +391,7 @@ n:
 				break
 			}
 
-			n, err := io.ReadAtLeast(conn, b, int(requestHeader.Length))
+			n, err := io.ReadAtLeast(conn, b[:length], int(requestHeader.Length))
 			if err != nil {
 				return err
 			}
