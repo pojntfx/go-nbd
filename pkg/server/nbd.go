@@ -12,9 +12,8 @@ import (
 )
 
 var (
-	ErrInvalidMagic       = errors.New("invalid magic")
-	ErrInvalidBlocksize   = errors.New("invalid blocksize")
-	ErrInvalidRequestSize = errors.New("invalid request size")
+	ErrInvalidMagic     = errors.New("invalid magic")
+	ErrInvalidBlocksize = errors.New("invalid blocksize")
 )
 
 const (
@@ -331,6 +330,10 @@ n:
 	}
 
 	// Transmission
+	var (
+		b                 = []byte{}
+		maxObservedLength = uint32(0)
+	)
 	for {
 		var requestHeader protocol.TransmissionRequestHeader
 		if err := binary.Read(conn, binary.BigEndian, &requestHeader); err != nil {
@@ -343,10 +346,14 @@ n:
 
 		length := requestHeader.Length
 		if length > defaultMaximumRequestSize {
-			return ErrInvalidRequestSize
+			return ErrInvalidBlocksize
 		}
 
-		b := make([]byte, length)
+		if length > maxObservedLength {
+			b = make([]byte, length)
+
+			maxObservedLength = length
+		}
 
 		switch requestHeader.Type {
 		case protocol.TRANSMISSION_TYPE_REQUEST_READ:
@@ -358,11 +365,7 @@ n:
 				return err
 			}
 
-			if len(b) < int(requestHeader.Length) {
-				return ErrInvalidBlocksize
-			}
-
-			n, err := export.Backend.ReadAt(b, int64(requestHeader.Offset))
+			n, err := export.Backend.ReadAt(b[:length], int64(requestHeader.Offset))
 			if err != nil {
 				return err
 			}
@@ -386,10 +389,6 @@ n:
 				}
 
 				break
-			}
-
-			if len(b) < int(requestHeader.Length) {
-				return ErrInvalidBlocksize
 			}
 
 			n, err := io.ReadAtLeast(conn, b, int(requestHeader.Length))
