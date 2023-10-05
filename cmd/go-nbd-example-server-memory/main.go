@@ -20,6 +20,7 @@ func main() {
 	minimumBlockSize := flag.Uint("minimum-block-size", 1, "Minimum block size")
 	preferredBlockSize := flag.Uint("preferred-block-size", client.MaximumBlockSize, "Preferred block size")
 	maximumBlockSize := flag.Uint("maximum-block-size", 0xffffffff, "Maximum block size")
+	multiConn := flag.Bool("multi-conn", true, "Whether to advertise support for multiple simultaneous connections")
 
 	flag.Parse()
 
@@ -73,6 +74,7 @@ func main() {
 					MinimumBlockSize:   uint32(*minimumBlockSize),
 					PreferredBlockSize: uint32(*preferredBlockSize),
 					MaximumBlockSize:   uint32(*maximumBlockSize),
+					SupportsMultiConn:  *multiConn,
 				}); err != nil {
 				panic(err)
 			}

@@ -190,7 +190,7 @@ $ rm -f disk.img && truncate -s 10G disk.img && go run ./cmd/go-nbd-example-serv
 $ go run ./cmd/go-nbd-example-server-memory .
 
 # With the C NBD client
-$ sudo umount ~/Downloads/mnt; sudo nbd-client -d /dev/nbd1 && echo 'NBD starting' | sudo tee /dev/kmsg && sudo nbd-client -N default localhost 10809
+$ sudo umount ~/Downloads/mnt; sudo nbd-client -d /dev/nbd1 && echo 'NBD starting' | sudo tee /dev/kmsg && sudo nbd-client -N default localhost 10809 /dev/nbd1
 
 # With the Go NBD client
 $ sudo umount ~/Downloads/mnt; go build -o /tmp/go-nbd-example-client ./cmd/go-nbd-example-client/ && sudo /tmp/go-nbd-example-client --file /dev/nbd1
