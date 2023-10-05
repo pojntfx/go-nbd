@@ -330,10 +330,7 @@ n:
 	}
 
 	// Transmission
-	var (
-		b                 = []byte{}
-		maxObservedLength = uint32(0)
-	)
+	b := []byte{}
 	for {
 		var requestHeader protocol.TransmissionRequestHeader
 		if err := binary.Read(conn, binary.BigEndian, &requestHeader); err != nil {
@@ -349,10 +346,8 @@ n:
 			return ErrInvalidBlocksize
 		}
 
-		if length > maxObservedLength {
+		if length != uint32(len(b)) {
 			b = make([]byte, length)
-
-			maxObservedLength = length
 		}
 
 		switch requestHeader.Type {
