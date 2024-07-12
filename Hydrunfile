@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -e
+
+# Test
+if [ "$1" = "test" ]; then
+  # Configure Git
+  git config --global --add safe.directory '*'
+
+  # Generate dependencies
+  make depend
+
+  # Run tests
+  make test
+
+  exit 0
+fi

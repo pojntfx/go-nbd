@@ -1,8 +1,10 @@
+<img alt="Project icon" style="vertical-align: middle;" src="./docs/icon.svg" width="128" height="128" align="left">
+
 # go-nbd
 
-![Logo](./docs/logo-readme.png)
-
 Pure Go NBD server and client library.
+
+<br/>
 
 [![hydrun CI](https://github.com/pojntfx/go-nbd/actions/workflows/hydrun.yaml/badge.svg)](https://github.com/pojntfx/go-nbd/actions/workflows/hydrun.yaml)
 ![Go Version](https://img.shields.io/badge/go%20version-%3E=1.20-61CFDD.svg)
@@ -13,7 +15,7 @@ Pure Go NBD server and client library.
 
 go-nbd is a lean NBD server and client library supporting the baseline protocol.
 
-It enables you to ...
+It enables you to:
 
 - **Build NBD servers and clients in Go:** Develop Network Block Device servers and clients using the efficient and easy-to-understand Go programming language, without having to fallback to CGo.
 - **Expose any `io.ReadWriter` as a block device:** Effortlessly turn a file, byte slice, S3 bucket or other `io.ReadWriter` into a fully-fledged block device.
@@ -27,7 +29,7 @@ You can add go-nbd to your Go project by running the following:
 $ go get github.com/pojntfx/go-nbd/...@latest
 ```
 
-## Usage
+## Tutorial
 
 > TL;DR: Define a backend, expose it with a server, connect a block device with the client and setup/mount the filesystem.
 
@@ -186,8 +188,8 @@ To build and start a development version of one of the examples locally, run the
 ```shell
 $ git clone https://github.com/pojntfx/go-nbd.git
 $ cd go-nbd
-$ rm -f disk.img && truncate -s 10G disk.img && go run ./cmd/go-nbd-example-server-file .
-$ go run ./cmd/go-nbd-example-server-memory .
+$ mkdir -p out && rm -f out/disk.img && truncate -s 10G out/disk.img && go run ./cmd/go-nbd-example-server-file --file out/disk.img
+$ go run ./cmd/go-nbd-example-server-memory
 
 # With the C NBD client
 $ sudo umount ~/Downloads/mnt; sudo nbd-client -d /dev/nbd1 && echo 'NBD starting' | sudo tee /dev/kmsg && sudo nbd-client -N default localhost 10809 /dev/nbd1
@@ -203,6 +205,6 @@ Have any questions or need help? Chat with us [on Matrix](https://matrix.to/#/#g
 
 ## License
 
-go-nbd (c) 2023 Felicitas Pojtinger and contributors
+go-nbd (c) 2024 Felicitas Pojtinger and contributors
 
 SPDX-License-Identifier: Apache-2.0
