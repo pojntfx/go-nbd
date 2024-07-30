@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"io"
 	"os"
 	"sync"
 )
@@ -35,12 +36,12 @@ func (b *FileBackend) WriteAt(p []byte, off int64) (n int, err error) {
 }
 
 func (b *FileBackend) Size() (int64, error) {
-	stat, err := b.file.Stat()
+	size, err := b.file.Seek(0, io.SeekEnd)
 	if err != nil {
 		return -1, err
 	}
 
-	return stat.Size(), nil
+	return size, nil
 }
 
 func (b *FileBackend) Sync() error {
